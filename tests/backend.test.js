@@ -1,10 +1,12 @@
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createApp, clinicDate } from '../server/app.js';
+import { clinicDate } from '../server/app.js';
+import { createTestApp as createApp } from './helpers/database.js';
 
 let app, server, base, patient, dietitian, stranger;
 const folder = mkdtempSync(join(tmpdir(), 'savor-test-'));
@@ -24,8 +26,8 @@ before(async () => {
 });
 after(async () => {
   await new Promise(resolve => server.close(resolve));
-  app.locals.close();
-  rmSync(folder, { recursive: true, force: true });
+  await app.locals.close();
+  await rm(folder, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 
 test('anonymous access is limited and bad credentials do not authenticate', async () => {
@@ -141,10 +143,10 @@ test('cross-origin writes, invalid bodies, and oversized payloads are rejected',
 
 test('data and session survive reopening the SQLite database', async () => {
   const secondApp = await createApp({ dbPath, seed: false, env: { NODE_ENV: 'test' } });
-  const row = secondApp.locals.db.prepare('SELECT glasses FROM hydration WHERE patientId=? AND date=?').get('patient-maya', clinicDate());
+  const row = await secondApp.locals.db.prepare('SELECT glasses FROM hydration WHERE patientId=? AND date=?').get('patient-maya', clinicDate());
   assert.equal(row.glasses, 6);
-  assert.ok(secondApp.locals.db.prepare('SELECT COUNT(*) AS total FROM sessions').get().total >= 3);
-  secondApp.locals.close();
+  assert.ok((await secondApp.locals.db.prepare('SELECT COUNT(*) AS total FROM sessions').get()).total >= 3);
+  await secondApp.locals.close();
 });
 
 test('production requires a trusted app origin and secure session cookies', async () => {
@@ -162,7 +164,7 @@ test('production requires a trusted app origin and secure session cookies', asyn
     assert.match(valid.headers.get('set-cookie'), /Secure/);
   } finally {
     await new Promise(resolve => productionServer.close(resolve));
-    productionApp.locals.close();
+    await productionApp.locals.close();
   }
 });
 

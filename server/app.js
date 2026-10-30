@@ -1,8 +1,8 @@
 import express from 'express';
-import { DatabaseSync } from 'node:sqlite';
+import { openDatabase } from './database.js';
 import { randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { mkdirSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -53,11 +53,9 @@ async function verifyPassword(password, stored) {
 }
 function noteRow(row) { return { ...row, shared: Boolean(row.shared) }; }
 
-function schema(db) {
-  db.exec(`
-    PRAGMA journal_mode = WAL;
-    PRAGMA foreign_keys = ON;
-    PRAGMA busy_timeout = 5000;
+async function schema(db) {
+  if (db.kind === 'sqlite') await db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
+  await db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY, name TEXT NOT NULL, email TEXT UNIQUE NOT NULL,
       passwordHash TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('patient','dietitian'))
@@ -91,18 +89,17 @@ function schema(db) {
 }
 
 async function seed(db, enabled, env) {
-  if (db.prepare('SELECT COUNT(*) AS total FROM users').get().total > 0) return;
+  if ((await db.prepare('SELECT COUNT(*) AS total FROM users').get()).total > 0) return;
   if (!enabled && !env.PROVIDER_EMAIL) return;
   const providerId = 'provider-alex';
   const providerEmail = (env.PROVIDER_EMAIL || 'alex@example.com').trim().toLowerCase();
   const providerPassword = env.PROVIDER_PASSWORD || (enabled ? 'SavorDemo123!' : '');
   insist(providerPassword.length >= 12, 'PROVIDER_PASSWORD must contain at least 12 characters.');
-  db.prepare('INSERT INTO users VALUES (?,?,?,?,?)').run(providerId, env.PROVIDER_NAME || 'Dr. Alex Rivera', providerEmail, await passwordHash(providerPassword), 'dietitian');
-  if (!enabled) return;
-  const patientId = 'patient-maya';
-  db.prepare('INSERT INTO users VALUES (?,?,?,?,?)').run(patientId, 'Maya Santos', 'maya@example.com', await passwordHash('SavorDemo123!'), 'patient');
-  db.prepare('INSERT INTO assignments VALUES (?,?)').run(patientId, providerId);
-  const insertMeal = db.prepare('INSERT INTO meals VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+  const statements = [{ sql: 'INSERT INTO users VALUES (?,?,?,?,?)', args: [providerId, env.PROVIDER_NAME || 'Dr. Alex Rivera', providerEmail, await passwordHash(providerPassword), 'dietitian'] }];
+  if (enabled) {
+    const patientId = 'patient-maya';
+    statements.push({ sql: 'INSERT INTO users VALUES (?,?,?,?,?)', args: [patientId, 'Maya Santos', 'maya@example.com', await passwordHash('SavorDemo123!'), 'patient'] });
+    statements.push({ sql: 'INSERT INTO assignments VALUES (?,?)', args: [patientId, providerId] });
   const examples = [
     ['Sunrise oats & mango', 'breakfast', 0, '07:45', 385, 16, 8, 'Energized', 'Rolled oats, milk, ripe mango, and a spoon of chia. A slow breakfast before class.'],
     ['Calamansi chicken bowl', 'lunch', 0, '12:15', 540, 36, 7, 'Satisfied', 'Grilled chicken, brown rice, cucumber, tomato, and a bright calamansi dressing.'],
@@ -112,12 +109,20 @@ async function seed(db, enabled, env) {
     ['Tofu pinakbet bowl', 'lunch', -2, '12:30', 490, 22, 9, 'Satisfied', 'A colorful vegetable bowl with tofu and rice.'],
     ['Overnight cacao oats', 'breakfast', -3, '07:30', 350, 14, 7, 'Content', 'Prepared the night before for a calmer morning.'],
   ];
-  for (const [name, type, offset, time, calories, protein, fiber, mood, note] of examples) {
-    insertMeal.run(randomUUID(), patientId, name, type, clinicDate(offset), time, calories, protein, fiber, mood, note);
+
+    for (const [name, type, offset, time, calories, protein, fiber, mood, note] of examples) {
+      statements.push({ sql: 'INSERT INTO meals VALUES (?,?,?,?,?,?,?,?,?,?,?)', args: [randomUUID(), patientId, name, type, clinicDate(offset), time, calories, protein, fiber, mood, note] });
+    }
+    statements.push({ sql: 'INSERT INTO hydration VALUES (?,?,?)', args: [patientId, clinicDate(), 4] });
+    statements.push({ sql: 'INSERT INTO appointments VALUES (?,?,?,?,?,?,?,?)', args: [randomUUID(), patientId, providerId, clinicDate(1), '14:00', 'Nutrition follow-up', 'scheduled', 'savor-' + randomBytes(16).toString('hex')] });
+    statements.push({ sql: 'INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?)', args: [randomUUID(), patientId, providerId, new Date(Date.now() - 3 * 86400000).toISOString(), 'Maya wants more steady energy during long class days. Enjoys familiar Filipino meals and cooking with family.', 'Demo journal shows regular breakfasts and a varied mix of grains, vegetables, and protein foods. Nutrition values are self-reported estimates.', 'Focus on a practical, consistent meal rhythm that fits the student schedule. This synthetic chart is for demonstration only.', 'Try preparing breakfast the night before twice this week. Add one colorful vegetable to lunch and check in on hunger before an afternoon snack. Review what felt easy at our next visit.', 1] });
   }
-  db.prepare('INSERT INTO hydration VALUES (?,?,?)').run(patientId, clinicDate(), 4);
-  db.prepare('INSERT INTO appointments VALUES (?,?,?,?,?,?,?,?)').run(randomUUID(), patientId, providerId, clinicDate(1), '14:00', 'Nutrition follow-up', 'scheduled', `savor-${randomBytes(16).toString('hex')}`);
-  db.prepare('INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?)').run(randomUUID(), patientId, providerId, new Date(Date.now() - 3 * 86400000).toISOString(), 'Maya wants more steady energy during long class days. Enjoys familiar Filipino meals and cooking with family.', 'Demo journal shows regular breakfasts and a varied mix of grains, vegetables, and protein foods. Nutrition values are self-reported estimates.', 'Focus on a practical, consistent meal rhythm that fits the student schedule. This synthetic chart is for demonstration only.', 'Try preparing breakfast the night before twice this week. Add one colorful vegetable to lunch and check in on hunger before an afternoon snack. Review what felt easy at our next visit.', 1);
+  // A single transaction prevents partial demo accounts after a failed connection.
+  try { await db.batch(statements); }
+  catch (error) {
+    if (String(error.message).includes('UNIQUE') && (await db.prepare('SELECT COUNT(*) AS total FROM users').get()).total > 0) return;
+    throw error;
+  }
 }
 
 export async function createApp(options = {}) {
@@ -132,14 +137,19 @@ export async function createApp(options = {}) {
     insist(originUrl.protocol === 'https:' || ['localhost', '127.0.0.1', '[::1]'].includes(originUrl.hostname), 'APP_ORIGIN must use HTTPS in production.');
   }
   const dbPath = options.dbPath || env.DB_PATH || resolve(ROOT, 'data', 'savor.sqlite');
-  if (dbPath !== ':memory:') mkdirSync(dirname(resolve(dbPath)), { recursive: true });
-  const db = new DatabaseSync(dbPath);
-  schema(db);
-  await seed(db, options.seed ?? (env.SEED_DEMO ? env.SEED_DEMO === 'true' : !production), env);
+  const db = await openDatabase({ env, dbPath, client: options.databaseClient });
+  try {
+    await schema(db);
+    await seed(db, options.seed ?? (env.SEED_DEMO ? env.SEED_DEMO === 'true' : !production), env);
+  } catch {
+    await db.close();
+    throw new Error('Database initialization failed. Check the database connection, token permissions, and storage access.');
+  }
   const dummyHash = await passwordHash(randomBytes(20).toString('hex'));
   const app = express();
   app.disable('x-powered-by');
-  app.locals.db = db;
+  app.locals.db = db.raw;
+  app.locals.databaseKind = db.kind;
   app.locals.close = () => db.close();
   const rates = new Map();
   const limiter = (limit, windowMs) => (req, res, next) => {
@@ -174,36 +184,36 @@ export async function createApp(options = {}) {
     if (['POST', 'PATCH', 'PUT'].includes(req.method) && (!req.body || Array.isArray(req.body) || typeof req.body !== 'object')) return res.status(400).json({ error: 'Send a JSON object in the request body.' });
     next();
   });
-  app.use('/api', (req, res, next) => {
+  app.use('/api', async (req, res, next) => {
     const raw = (req.headers.cookie || '').split(';').map(x => x.trim()).find(x => x.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1);
     req.sessionToken = raw && /^[a-f0-9]{64}$/.test(raw) ? raw : null;
-    req.user = req.sessionToken ? db.prepare('SELECT u.* FROM sessions s JOIN users u ON u.id=s.userId WHERE s.tokenHash=? AND s.expiresAt>?').get(hashToken(req.sessionToken), Date.now()) : null;
+    req.user = req.sessionToken ? await db.prepare('SELECT u.* FROM sessions s JOIN users u ON u.id=s.userId WHERE s.tokenHash=? AND s.expiresAt>?').get(hashToken(req.sessionToken), Date.now()) : null;
     next();
   });
   const auth = (req, res, next) => req.user ? next() : res.status(401).json({ error: 'Please sign in to continue.' });
   const role = value => (req, res, next) => req.user.role === value ? next() : res.status(403).json({ error: 'Your account cannot perform this action.' });
   const cookieOptions = { httpOnly: true, secure: production, sameSite: 'strict', path: '/' };
-  function startSession(req, res, userId) {
-    if (req.sessionToken) db.prepare('DELETE FROM sessions WHERE tokenHash=?').run(hashToken(req.sessionToken));
-    db.prepare('DELETE FROM sessions WHERE expiresAt<=?').run(Date.now());
+  async function startSession(req, res, userId) {
+    if (req.sessionToken) await db.prepare('DELETE FROM sessions WHERE tokenHash=?').run(hashToken(req.sessionToken));
+    await db.prepare('DELETE FROM sessions WHERE expiresAt<=?').run(Date.now());
     const token = randomBytes(32).toString('hex');
-    db.prepare('INSERT INTO sessions VALUES (?,?,?)').run(hashToken(token), userId, Date.now() + SESSION_MS);
+    await db.prepare('INSERT INTO sessions VALUES (?,?,?)').run(hashToken(token), userId, Date.now() + SESSION_MS);
     res.cookie(COOKIE, token, { ...cookieOptions, maxAge: SESSION_MS });
   }
-  const assignedProvider = patientId => db.prepare('SELECT providerId FROM assignments WHERE patientId=?').get(patientId)?.providerId;
-  const appointmentById = id => db.prepare('SELECT a.*, u.name AS patientName, p.name AS providerName FROM appointments a JOIN users u ON u.id=a.patientId JOIN users p ON p.id=a.providerId WHERE a.id=?').get(id);
-  const noteById = id => noteRow(db.prepare('SELECT n.*, u.name AS patientName FROM notes n JOIN users u ON u.id=n.patientId WHERE n.id=?').get(id));
+  const assignedProvider = async patientId => (await db.prepare('SELECT providerId FROM assignments WHERE patientId=?').get(patientId))?.providerId;
+  const appointmentById = async id => db.prepare('SELECT a.*, u.name AS patientName, p.name AS providerName FROM appointments a JOIN users u ON u.id=a.patientId JOIN users p ON p.id=a.providerId WHERE a.id=?').get(id);
+  const noteById = async id => noteRow(await db.prepare('SELECT n.*, u.name AS patientName FROM notes n JOIN users u ON u.id=n.patientId WHERE n.id=?').get(id));
 
-  app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+  app.get('/api/health', async (req, res) => { try { await db.prepare('SELECT 1 AS ready').get(); res.json({ status: 'ok', storage: db.kind }); } catch { res.status(503).json({ status: 'unavailable' }); } });
   app.get('/api/config', (req, res) => res.json({ jitsiDomain, timezone: 'Asia/Manila' }));
   app.get('/api/me', (req, res) => res.json({ user: req.user ? publicUser(req.user) : null }));
   app.post('/api/auth/login', limiter(15, 15 * 60000), async (req, res) => {
     const email = textField(req.body.email, 'Email', 254).toLowerCase();
     const password = textField(req.body.password, 'Password', 256);
-    const user = db.prepare('SELECT * FROM users WHERE email=?').get(email);
+    const user = await db.prepare('SELECT * FROM users WHERE email=?').get(email);
     const valid = await verifyPassword(password, user?.passwordHash || dummyHash);
     insist(user && valid, 'The email or password is incorrect.', 401);
-    startSession(req, res, user.id);
+    await startSession(req, res, user.id);
     res.json({ user: publicUser(user) });
   });
   app.post('/api/auth/register', limiter(5, 15 * 60000), async (req, res) => {
@@ -212,95 +222,96 @@ export async function createApp(options = {}) {
     insist(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), 'Enter a valid email address.');
     const password = textField(req.body.password, 'Password', 256);
     insist(password.length >= 12, 'Use a password with at least 12 characters.');
-    insist(!db.prepare('SELECT id FROM users WHERE email=?').get(email), 'An account with this email already exists.', 409);
-    const provider = db.prepare("SELECT id FROM users WHERE role='dietitian' ORDER BY id LIMIT 1").get();
+    insist(!(await db.prepare('SELECT id FROM users WHERE email=?').get(email)), 'An account with this email already exists.', 409);
+    const provider = await db.prepare("SELECT id FROM users WHERE role='dietitian' ORDER BY id LIMIT 1").get();
     insist(provider, 'Registration will open once a dietitian is configured.', 503);
     const id = randomUUID();
     const hashed = await passwordHash(password);
-    db.exec('BEGIN');
     try {
-      db.prepare('INSERT INTO users VALUES (?,?,?,?,?)').run(id, name, email, hashed, 'patient');
-      db.prepare('INSERT INTO assignments VALUES (?,?)').run(id, provider.id);
-      db.exec('COMMIT');
-    } catch (error) { db.exec('ROLLBACK'); if (String(error.message).includes('UNIQUE')) throw new RequestError(409, 'An account with this email already exists.'); throw error; }
-    startSession(req, res, id);
+      await db.batch([
+        { sql: 'INSERT INTO users VALUES (?,?,?,?,?)', args: [id, name, email, hashed, 'patient'] },
+        { sql: 'INSERT INTO assignments VALUES (?,?)', args: [id, provider.id] },
+      ]);
+    } catch (error) { if (String(error.message).includes('UNIQUE')) throw new RequestError(409, 'An account with this email already exists.'); throw error; }
+    await startSession(req, res, id);
     res.status(201).json({ user: { id, name, email, role: 'patient' } });
   });
-  app.post('/api/auth/logout', (req, res) => {
-    if (req.sessionToken) db.prepare('DELETE FROM sessions WHERE tokenHash=?').run(hashToken(req.sessionToken));
+  app.post('/api/auth/logout', async (req, res) => {
+    if (req.sessionToken) await db.prepare('DELETE FROM sessions WHERE tokenHash=?').run(hashToken(req.sessionToken));
     res.clearCookie(COOKIE, cookieOptions);
     res.json({ ok: true });
   });
-  app.get('/api/dashboard', auth, (req, res) => {
+  app.get('/api/dashboard', auth, async (req, res) => {
     const provider = req.user.role === 'dietitian';
     const scope = provider ? 'patientId IN (SELECT patientId FROM assignments WHERE providerId=?)' : 'patientId=?';
-    const meals = db.prepare(`SELECT * FROM meals WHERE ${scope} ORDER BY date DESC, time DESC`).all(req.user.id);
-    const appointments = db.prepare(`SELECT a.*, u.name AS patientName, p.name AS providerName FROM appointments a JOIN users u ON u.id=a.patientId JOIN users p ON p.id=a.providerId WHERE ${provider ? 'a.providerId=?' : 'a.patientId=?'} ORDER BY date, time`).all(req.user.id);
-    const notes = db.prepare(`SELECT n.*, u.name AS patientName FROM notes n JOIN users u ON u.id=n.patientId WHERE ${provider ? 'n.providerId=?' : 'n.patientId=? AND n.shared=1'} ORDER BY createdAt DESC`).all(req.user.id).map(noteRow);
-    const water = db.prepare('SELECT date, glasses FROM hydration WHERE patientId=? AND date=?').get(req.user.id, clinicDate()) || { date: clinicDate(), glasses: 0 };
-    const patients = provider ? db.prepare('SELECT u.id, u.name, u.email FROM users u JOIN assignments a ON u.id=a.patientId WHERE a.providerId=? ORDER BY u.name').all(req.user.id) : [{ id: req.user.id, name: req.user.name, email: req.user.email }];
+    const meals = await db.prepare(`SELECT * FROM meals WHERE ${scope} ORDER BY date DESC, time DESC`).all(req.user.id);
+    const appointments = await db.prepare(`SELECT a.*, u.name AS patientName, p.name AS providerName FROM appointments a JOIN users u ON u.id=a.patientId JOIN users p ON p.id=a.providerId WHERE ${provider ? 'a.providerId=?' : 'a.patientId=?'} ORDER BY date, time`).all(req.user.id);
+    const notes = (await db.prepare(`SELECT n.*, u.name AS patientName FROM notes n JOIN users u ON u.id=n.patientId WHERE ${provider ? 'n.providerId=?' : 'n.patientId=? AND n.shared=1'} ORDER BY createdAt DESC`).all(req.user.id)).map(noteRow);
+    const water = (await db.prepare('SELECT date, glasses FROM hydration WHERE patientId=? AND date=?').get(req.user.id, clinicDate())) || { date: clinicDate(), glasses: 0 };
+    const patients = provider ? await db.prepare('SELECT u.id, u.name, u.email FROM users u JOIN assignments a ON u.id=a.patientId WHERE a.providerId=? ORDER BY u.name').all(req.user.id) : [{ id: req.user.id, name: req.user.name, email: req.user.email }];
     const visibleNotes = provider ? notes : notes.map(({ id, patientId, patientName, createdAt, plan, shared }) => ({ id, patientId, patientName, createdAt, plan, shared }));
     res.json({ meals, appointments, notes: visibleNotes, water, patients });
   });
-  app.post('/api/meals', auth, role('patient'), (req, res) => {
+  app.post('/api/meals', auth, role('patient'), async (req, res) => {
     const b = req.body;
     const meal = { id: randomUUID(), patientId: req.user.id, name: textField(b.name, 'Meal name', 100), type: textField(b.type, 'Meal type', 20).toLowerCase(), date: validDate(b.date), time: validTime(b.time), calories: numberField(b.calories, 'Calories', 10000), protein: numberField(b.protein, 'Protein', 1000), fiber: numberField(b.fiber, 'Fiber', 1000), mood: textField(b.mood, 'Feeling', 40), note: textField(b.note, 'Note', 1000, false) };
     insist(['breakfast', 'lunch', 'dinner', 'snack'].includes(meal.type), 'Choose breakfast, lunch, dinner, or snack.');
     insist(meal.date <= clinicDate(), 'Meal entries cannot be dated in the future.');
-    db.prepare('INSERT INTO meals VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(...Object.values(meal));
+    await db.prepare('INSERT INTO meals VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(...Object.values(meal));
     res.status(201).json({ meal });
   });
-  app.delete('/api/meals/:id', auth, role('patient'), (req, res) => {
-    const result = db.prepare('DELETE FROM meals WHERE id=? AND patientId=?').run(req.params.id, req.user.id);
+  app.delete('/api/meals/:id', auth, role('patient'), async (req, res) => {
+    const result = await db.prepare('DELETE FROM meals WHERE id=? AND patientId=?').run(req.params.id, req.user.id);
     insist(result.changes > 0, 'Meal entry not found.', 404);
     res.json({ ok: true });
   });
-  app.post('/api/water', auth, role('patient'), (req, res) => {
+  app.post('/api/water', auth, role('patient'), async (req, res) => {
     const date = validDate(req.body.date);
     const glasses = numberField(req.body.glasses, 'Glasses', 30);
     insist(Number.isInteger(req.body.glasses), 'Glasses must be a whole number.');
     insist(date <= clinicDate(), 'Hydration cannot be dated in the future.');
-    db.prepare('INSERT INTO hydration VALUES (?,?,?) ON CONFLICT(patientId,date) DO UPDATE SET glasses=excluded.glasses').run(req.user.id, date, glasses);
+    await db.prepare('INSERT INTO hydration VALUES (?,?,?) ON CONFLICT(patientId,date) DO UPDATE SET glasses=excluded.glasses').run(req.user.id, date, glasses);
     res.json({ water: { date, glasses } });
   });
-  app.get('/api/availability', auth, (req, res) => {
+  app.get('/api/availability', auth, async (req, res) => {
     const date = validDate(req.query.date);
-    const providerId = req.user.role === 'dietitian' ? req.user.id : assignedProvider(req.user.id);
-    const booked = db.prepare("SELECT time FROM appointments WHERE providerId=? AND date=? AND status!='cancelled'").all(providerId, date).map(a => a.time);
+    const providerId = req.user.role === 'dietitian' ? req.user.id : await assignedProvider(req.user.id);
+    const booked = (await db.prepare("SELECT time FROM appointments WHERE providerId=? AND date=? AND status!='cancelled'").all(providerId, date)).map(a => a.time);
     res.json({ slots: SLOTS.map(time => ({ time, available: !booked.includes(time) && appointmentInstant(date, time) > Date.now() })) });
   });
-  app.post('/api/appointments', auth, role('patient'), (req, res) => {
+  app.post('/api/appointments', auth, role('patient'), async (req, res) => {
     const date = validDate(req.body.date);
     const time = validTime(req.body.time);
     const type = textField(req.body.type, 'Visit type', 80);
     insist(SLOTS.includes(time), 'Choose one of the available clinic time slots.');
     insist(appointmentInstant(date, time) > Date.now(), 'Choose a future appointment time.');
-    const providerId = assignedProvider(req.user.id);
+    const providerId = await assignedProvider(req.user.id);
     insist(providerId, 'A dietitian must be assigned before booking.', 409);
     const id = randomUUID();
     try {
-      db.prepare('INSERT INTO appointments VALUES (?,?,?,?,?,?,?,?)').run(id, req.user.id, providerId, date, time, type, 'scheduled', `savor-${randomBytes(16).toString('hex')}`);
+      await db.prepare('INSERT INTO appointments VALUES (?,?,?,?,?,?,?,?)').run(id, req.user.id, providerId, date, time, type, 'scheduled', `savor-${randomBytes(16).toString('hex')}`);
     } catch (error) { if (String(error.message).includes('UNIQUE')) throw new RequestError(409, 'This time was just booked. Please select another slot.'); throw error; }
-    res.status(201).json({ appointment: appointmentById(id) });
+    res.status(201).json({ appointment: await appointmentById(id) });
   });
-  app.patch('/api/appointments/:id', auth, (req, res) => {
-    const appointment = appointmentById(req.params.id);
+  app.patch('/api/appointments/:id', auth, async (req, res) => {
+    const appointment = await appointmentById(req.params.id);
     insist(appointment && (req.user.role === 'dietitian' ? appointment.providerId === req.user.id : appointment.patientId === req.user.id), 'Appointment not found.', 404);
     const status = req.body.status;
     insist(['cancelled', 'completed'].includes(status), 'Choose cancelled or completed.');
     insist(status !== 'completed' || req.user.role === 'dietitian', 'Only your dietitian can complete a visit.', 403);
     insist(appointment.status === 'scheduled', 'This appointment has already been closed.', 409);
-    db.prepare('UPDATE appointments SET status=? WHERE id=?').run(status, appointment.id);
+    const updated = await db.prepare("UPDATE appointments SET status=? WHERE id=? AND status='scheduled'").run(status, appointment.id);
+    insist(updated.changes > 0, 'This appointment has already been closed.', 409);
     res.json({ appointment: appointmentById(appointment.id) });
   });
-  app.post('/api/notes', auth, role('dietitian'), (req, res) => {
+  app.post('/api/notes', auth, role('dietitian'), async (req, res) => {
     const patientId = textField(req.body.patientId, 'Patient', 80);
-    insist(assignedProvider(patientId) === req.user.id, 'Patient not found in your care list.', 404);
+    insist(await assignedProvider(patientId) === req.user.id, 'Patient not found in your care list.', 404);
     const fields = ['subjective', 'objective', 'assessment', 'plan'].map(field => textField(req.body[field], field[0].toUpperCase() + field.slice(1), 3000));
     insist(typeof req.body.shared === 'boolean', 'Specify whether this note is shared.');
     const id = randomUUID();
-    db.prepare('INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?)').run(id, patientId, req.user.id, new Date().toISOString(), ...fields, req.body.shared ? 1 : 0);
-    res.status(201).json({ note: noteById(id) });
+    await db.prepare('INSERT INTO notes VALUES (?,?,?,?,?,?,?,?,?)').run(id, patientId, req.user.id, new Date().toISOString(), ...fields, req.body.shared ? 1 : 0);
+    res.status(201).json({ note: await noteById(id) });
   });
   app.use('/api', (req, res) => res.status(404).json({ error: 'API endpoint not found.' }));
   const dist = resolve(ROOT, 'dist');

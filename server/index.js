@@ -8,7 +8,7 @@ const server = app.listen(port, '0.0.0.0', () => {
   console.log(`Savor Care is ready at http://localhost:${port}`);
 });
 function shutdown() {
-  server.close(() => { app.locals.close(); process.exit(0); });
+  server.close(async () => { await app.locals.close(); process.exit(0); });
 }
 process.on('SIGINT', shutdown);
 process.on('SIGTERM', shutdown);

@@ -1,5 +1,7 @@
 # Savor Care verification — 30 October 2026
 
+Storage update after this UI review: [Turso support and its verification](TURSO-VERIFICATION.md) are now available. Live cloud connection/restart verification still awaits the database credentials and active Render service.
+
 ## Result
 
 The local build passed and all 21 automated checks passed. The patient and dietitian flows listed below were also exercised in the browser using fictional records in an isolated QA database. This is not a claim that every possible input or external service condition has been verified.
@@ -55,7 +57,7 @@ The production frontend build (`npm run build`) also passed.
 
 - **Hosted app:** Resume Render and verify login, meal/appointment/note changes over its HTTPS URL after redeploying these fixes. The hosted app's environment values and deployment logs were not accessible in this session.
 - **Real video call:** Have a patient and dietitian join the same appointment on two devices, complete any external Jitsi moderator sign-in, and verify both directions of camera/audio plus leaving/rejoining. Reaching pre-join alone does not prove a call works.
-- **Hosted durable storage:** The current local-SQLite version on Render Free still loses newly saved records when its filesystem resets. Turso integration has not been implemented. Local database persistence does not resolve this hosting limitation.
+- **Hosted durable storage:** Local SQLite on Render Free loses newly saved records when its filesystem resets. Turso support was added after this UI review; see TURSO-SETUP.md and TURSO-VERIFICATION.md. It must be configured and verified on the live service before this limitation is resolved.
 - Docker execution, other browsers/devices, all network outage cases, and screen-reader testing with a human user were not performed.
 
 ## Visual evidence

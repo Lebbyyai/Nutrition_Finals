@@ -1,10 +1,14 @@
 # Savor Care
 
-Latest verification: [30 October 2026 QA report](docs/QA-REPORT.md) — 21 automated checks passed; includes browser results, fixes, and remaining hosted/video/storage acceptance checks.
+Earlier full UI verification: [30 October 2026 QA report](docs/QA-REPORT.md) — 21 automated checks passed; includes browser results, fixes, and remaining hosted/video/storage acceptance checks.
 
 **Familiar food. A little more care.**
 
-A full-stack tele-nutrition finals project that connects a patient's food journal, an appointment calendar, a dietitian's chart, and a virtual consultation. Built with React, Vite, Express, and a persistent SQLite database. Open this folder directly in VS Code.
+**Free persistent hosting:** [Connect Turso to your existing Render Free service](docs/TURSO-SETUP.md). Cloud support is implemented; enter your own database credentials in Render and complete the live restart test before claiming cloud persistence is verified.
+
+[Storage verification](docs/TURSO-VERIFICATION.md): 27 checks passed with local SQLite and another 27 passed through asynchronous libSQL; the production build passed. Connection to your own cloud database is still pending.
+
+A full-stack tele-nutrition finals project that connects a patient's food journal, an appointment calendar, a dietitian's chart, and a virtual consultation. Built with React, Vite, Express, and SQLite locally or a persistent Turso cloud database. Open this folder directly in VS Code.
 
 The visual identity combines warm ivory, forest green, coral accents, and an original illustrated plate. The content takes inspiration from a Filipino home pantry: monggo, tinola, rice, and familiar routines. The journal encourages curiosity about food and daily habits instead of reducing meals to a score.
 
@@ -112,7 +116,10 @@ Copy `.env.example` to `.env`. The server loads it automatically; environment va
 | Variable | Purpose |
 | --- | --- |
 | `PORT` | Express port; default `3001` |
-| `DB_PATH` | SQLite file path; default `./data/savor.sqlite` |
+| `DB_PATH` | Local SQLite path; ignored in Turso mode |
+| `DATABASE_DRIVER` | Set `turso` on Render to require cloud credentials; defaults to SQLite without credentials |
+| `TURSO_DATABASE_URL` | Exact Turso connection URL; server only |
+| `TURSO_AUTH_TOKEN` | Private database read/write token; server only |
 | `NODE_ENV` | `development` locally; `production` for HTTPS hosting |
 | `APP_ORIGIN` | Browser origin allowed to change application data; required for production |
 | `JITSI_DOMAIN` | Video server hostname; default `meet.jit.si` |
@@ -123,9 +130,15 @@ Copy `.env.example` to `.env`. The server loads it automatically; environment va
 
 Production disables demo seeding by default. Explicitly set `SEED_DEMO=true` only when hosting a synthetic classroom/portfolio demonstration. To provision without demo users, set `SEED_DEMO=false` and supply the provider variables. Changing the seed setting does not remove existing accounts or records from an existing database.
 
-## Deploy as a classroom demo
+## Free hosting with persistent Turso storage
 
-The app is a Node service with local SQLite storage. It needs **one running instance** with a persistent, writable data directory. A static-only host cannot run its API. A host with an ephemeral filesystem will lose data when its container is replaced unless a persistent volume is attached.
+Use the existing Render Free service plus Turso Free. See [TURSO-SETUP.md](docs/TURSO-SETUP.md) for database creation, private environment values, build/start commands, health checks, and restart verification. This needs no Render disk. An existing local SQLite database is not automatically copied into an empty cloud database.
+
+The local test suite runs with `npm test`; `npm run test:libsql` repeats the workflows through the asynchronous database adapter against temporary local libSQL storage.
+
+## Alternative: deploy with a local SQLite disk
+
+When using local SQLite instead of Turso, the app needs **one running instance** with a persistent, writable data directory. A static-only host cannot run its API. A host with an ephemeral filesystem will lose data when its container is replaced unless a persistent volume is attached.
 
 With Docker:
 
@@ -151,6 +164,4 @@ Before using real patient data, the project needs a deployment-specific review o
 - **Camera or microphone unavailable:** Check browser/site permissions and whether another application is using the device.
 - **Database cannot be written:** Confirm the directory in `DB_PATH` exists or can be created, and that the app user has write permission.
 
-To start a fresh demonstration, stop the server, back up any records you want to keep, and move the `data` folder outside the project. Restart with `SEED_DEMO=true`; a new database will be created. This starts a new demo rather than preserving the old records.
-#   N u t r i t i o n _ F i n a l s  
- 
+For **local SQLite only**, to start a fresh demonstration, stop the server, back up any records you want to keep, and move the `data` folder outside the project. Restart with `SEED_DEMO=true`; a new database will be created. This starts a new demo rather than preserving the old records.
