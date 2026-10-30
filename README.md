@@ -1,5 +1,7 @@
 # Savor Care
 
+Latest verification: [30 October 2026 QA report](docs/QA-REPORT.md) — 21 automated checks passed; includes browser results, fixes, and remaining hosted/video/storage acceptance checks.
+
 **Familiar food. A little more care.**
 
 A full-stack tele-nutrition finals project that connects a patient's food journal, an appointment calendar, a dietitian's chart, and a virtual consultation. Built with React, Vite, Express, and a persistent SQLite database. Open this folder directly in VS Code.

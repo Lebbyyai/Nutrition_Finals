@@ -167,6 +167,8 @@ export async function createApp(options = {}) {
     }
     next();
   });
+  // Four valid 3,000-character SOAP fields can exceed 32 KB in UTF-8.
+  app.use('/api/notes', express.json({ limit: '96kb' }));
   app.use(express.json({ limit: '32kb' }));
   app.use('/api', (req, res, next) => {
     if (['POST', 'PATCH', 'PUT'].includes(req.method) && (!req.body || Array.isArray(req.body) || typeof req.body !== 'object')) return res.status(400).json({ error: 'Send a JSON object in the request body.' });
