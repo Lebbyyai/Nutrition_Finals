@@ -1,167 +1,279 @@
 # Savor Care
 
-Earlier full UI verification: [30 October 2026 QA report](docs/QA-REPORT.md) — 21 automated checks passed; includes browser results, fixes, and remaining hosted/video/storage acceptance checks.
-
 **Familiar food. A little more care.**
 
-**Free persistent hosting:** [Connect Turso to your existing Render Free service](docs/TURSO-SETUP.md). Cloud support is implemented; enter your own database credentials in Render and complete the live restart test before claiming cloud persistence is verified.
+A full-stack tele-nutrition platform that connects patients and dietitians through food journaling, appointment scheduling, shared care plans, and video consultations. Built as a finals project, with original illustrations and content inspired by everyday Filipino meals.
 
-[Storage verification](docs/TURSO-VERIFICATION.md): 27 checks passed with local SQLite and another 27 passed through asynchronous libSQL; the production build passed. Connection to your own cloud database is still pending.
+[Open website](https://nutrition-finals.onrender.com) · [Health check](https://nutrition-finals.onrender.com/api/health) · [Presentation guide](docs/DEMO-GUIDE.md)
 
-A full-stack tele-nutrition finals project that connects a patient's food journal, an appointment calendar, a dietitian's chart, and a virtual consultation. Built with React, Vite, Express, and SQLite locally or a persistent Turso cloud database. Open this folder directly in VS Code.
+> **Project scope:** This is a student MVP. Use fictional information for demonstrations. Educational nutrition content does not replace individual professional advice.
 
-The visual identity combines warm ivory, forest green, coral accents, and an original illustrated plate. The content takes inspiration from a Filipino home pantry: monggo, tinola, rice, and familiar routines. The journal encourages curiosity about food and daily habits instead of reducing meals to a score.
+## Contents
 
-All patients, providers, clinical notes, and appointments in the demo are fictional. Nutrition content is educational and is not an individual diagnosis or treatment plan.
+- [Features](#features)
+- [Technology](#technology)
+- [Local setup](#local-setup)
+- [Using the system](#using-the-system)
+- [Configuration](#configuration)
+- [Deployment](#deployment)
+- [Testing and verification](#testing-and-verification)
+- [Project structure](#project-structure)
+- [Troubleshooting](#troubleshooting)
+- [Additional guides](#additional-guides)
 
-## Run in VS Code
+## Features
 
-Install **Node.js 24 or newer**. This project uses Node's built-in SQLite module; older Node versions will not work.
+| Feature | What users can do |
+| --- | --- |
+| Accounts | Register as a patient, sign in, and sign out using server-side sessions. |
+| Overview | Review daily meal totals, hydration, and the next consultation. |
+| Food journal | Add, search, filter by date, and remove personal meal entries. Record estimated calories, protein, fiber, mood, and notes. |
+| Hydration | Add or remove glasses in a daily water log. |
+| Appointments | Book available 30-minute clinic slots and cancel scheduled visits. Dietitians can mark visits complete. |
+| Patient charts | Dietitians can review assigned patients and record SOAP notes. |
+| Shared care plans | Patients can read the plan from shared notes; private SOAP sections remain restricted to the provider. |
+| Video consultations | Open an appointment-specific Jitsi meeting from either account. |
+| Reading room | Read original articles about familiar food, journaling, and consultation preparation. |
+| Responsive interface | Use desktop, laptop, and mobile layouts, with scrolling navigation on shorter windows. |
 
-1. Extract the project ZIP and open the `savor-care` folder in VS Code.
-2. Open **Terminal → New Terminal**.
-3. Run:
+## Technology
+
+| Layer | Technology |
+| --- | --- |
+| Programming language | JavaScript, including React JSX |
+| Interface | React, CSS, Lucide icons, and original SVG illustrations |
+| Frontend tooling | Vite |
+| Server | Node.js 24+ and Express |
+| Database | SQLite for local development; Turso for hosted storage |
+| Video | Jitsi External API |
+| Authentication | scrypt password hashing and HttpOnly cookie sessions |
+| Deployment | Render web service connected to GitHub |
+
+```text
+React interface ── /api requests ──► Express API ──► SQLite or Turso
+                                          │
+                                          └── Appointment access ──► Jitsi meeting
+```
+
+## Local setup
+
+### Requirements
+
+- Node.js **24 or newer**, with npm.
+- VS Code or another code editor.
+- Internet access for installing dependencies and using video calls.
+
+### 1. Open the project
+
+Clone the repository, then open the folder in VS Code:
+
+```sh
+git clone https://github.com/Lebbyyai/Nutrition_Finals.git
+cd Nutrition_Finals
+```
+
+If you downloaded a ZIP, extract it and open the folder containing `package.json`.
+
+### 2. Create the local configuration
+
+In the VS Code terminal, copy the example configuration.
+
+**Windows PowerShell:**
 
 ```powershell
 Copy-Item .env.example .env
-npm install
+```
+
+**macOS / Linux:**
+
+```sh
+cp .env.example .env
+```
+
+The example configuration uses local SQLite. Cloud credentials are optional for local development.
+
+### 3. Install and run
+
+```sh
+npm ci
 npm run dev
 ```
 
-On macOS/Linux, use `cp .env.example .env` for the first command.
+Open **[http://localhost:5173](http://localhost:5173)** and leave the terminal running. Press **Ctrl + C** in the terminal to stop the app.
 
-4. Visit **http://localhost:5173**. Leave the terminal running.
+The interface runs on port **5173** and the API on **3001**. Vite forwards API requests to Express. The server creates the local database and, when enabled, fictional seed records on the first run.
 
-The development command runs the React interface on port 5173 and the API on port 3001. Vite forwards API calls to the server. SQLite creates the database and inserts the demo records on the first run. A SQLite experimental warning from Node, if shown, does not by itself mean the app failed.
+### Available commands
 
-## Demo accounts
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the frontend and API for development. |
+| `npm run build` | Build the production frontend into `dist/`. |
+| `npm start` | Serve the built frontend and API with Express. |
+| `npm test` | Run the automated backend checks. |
+| `npm run test:libsql` | Run checks through the asynchronous adapter using temporary local libSQL databases. |
+
+To preview the built app locally, run `npm run build`, set `APP_ORIGIN=http://localhost:3001` in `.env`, keep `NODE_ENV=development`, and run `npm start`. Open **[http://localhost:3001](http://localhost:3001)**. Restore `APP_ORIGIN=http://localhost:5173` before returning to `npm run dev`.
+
+## Using the system
+
+### Patient workflow
+
+1. Choose **Create an account**, or sign in with an existing patient account.
+2. Select **Log a meal** or open **Food journal** to record a meal.
+3. Update the water log from **Overview**.
+4. Open **Appointments** to book an available consultation.
+5. Open **Care plan** to read plans shared by the dietitian.
+6. Open the consultation room for the booked appointment.
+
+### Dietitian workflow
+
+1. Sign in with a provisioned dietitian account.
+2. Open **Patient charts** and select an assigned patient.
+3. Review the journal and write SOAP notes.
+4. Share a care plan when appropriate. Patients receive the plan, not the private subjective, objective, or assessment sections.
+5. Open the same appointment to join the consultation, then mark the visit complete when finished.
+
+Public registration creates patient accounts. Dietitian accounts are provisioned through the seed configuration below.
+
+### Classroom accounts
+
+When `SEED_DEMO=true` initializes an empty database, these fictional accounts are created:
 
 | Role | Email | Password |
 | --- | --- | --- |
 | Patient | `maya@example.com` | `SavorDemo123!` |
 | Dietitian | `alex@example.com` | `SavorDemo123!` |
 
-Use a normal browser window for the patient and an incognito/private window or a different browser for the dietitian. Tabs in the same browser profile share the login cookie.
+The sign-in page no longer displays demo shortcuts. Enter these credentials manually if the accounts exist in your database. Their passwords are public and intended only for fictional classroom demonstrations.
 
-## What to present
+Use separate browser profiles, a private window, or separate devices to test both roles. Tabs in the same browser profile share a login session.
 
-| Assignment requirement | Project flow |
-| --- | --- |
-| Consumer login | Patient login and registration with server-side sessions |
-| Meal logging | **Food journal** saves the patient's entries to SQLite |
-| Appointment scheduling | **Appointments** books 30-minute clinic slots using Manila time |
-| Provider charting | **Patient charts** lets the dietitian review patient context, save private notes, and share selected care notes |
-| Integrated care | Patient journal entries and shared provider updates connect through the same API and database |
-| Virtual consultation | Appointment room opens an embedded Jitsi meeting |
-| Deployable MVP | Production frontend served by Express, a Dockerfile, and persistent storage instructions |
-| End-to-end testing | Automated API checks plus a repeatable browser acceptance checklist |
+### Video consultations
 
-Patient navigation includes **Overview**, **Food journal**, **Appointments**, **Care plan**, and **The reading room**. Provider navigation includes **Overview**, **Patient charts**, **Appointments**, and **The reading room**.
+Join the **same appointment** from the patient and dietitian accounts. Allow camera and microphone access when prompted. Hosted camera access requires HTTPS; localhost is suitable for development.
 
-See [the presentation and testing guide](docs/DEMO-GUIDE.md) for a classroom walkthrough.
-
-## Video calls
-
-The meeting screen uses the Jitsi External API and defaults to `meet.jit.si`. Opening a meeting requires an internet connection. Allow camera and microphone access when the browser asks. Camera access works on `localhost` during development and requires HTTPS on a hosted deployment.
-
-Join the **same appointment** from the patient and dietitian accounts. For a convincing two-person demonstration, use two devices, or separate browser profiles with headphones. The public Jitsi service may ask a moderator to sign in before the meeting starts; follow the service's current prompts. Network policy, third-party cookies, or an ad blocker can also affect embedded meetings.
-
-The application checks appointment access before returning its meeting information and uses a randomly generated room name. That protects the application's workflow, but a public Jitsi room is not a clinically approved private consultation system. A person with a room link can potentially join outside the application. Before handling actual health information, configure an appropriately reviewed, authenticated video deployment with signed access and an agreed privacy/consent policy.
-
-## Commands
-
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start the interface and API for development |
-| `npm run build` | Build the production interface into `dist/` |
-| `npm start` | Start Express, which serves the built interface and API |
-| `npm test` | Run the backend tests in `tests/` |
-
-For a local preview of the built app, run `npm run build`, set `APP_ORIGIN=http://localhost:3001` in your local `.env`, and run `npm start`. Visit http://localhost:3001. Keep `NODE_ENV=development` for this local HTTP preview; use production mode and HTTPS for public hosting.
-
-The manual browser checklist includes behaviors that API tests cannot prove, such as camera permissions, responsive layout, and two-participant video. A successful build alone does not verify a real video call.
-
-## How the pieces connect
-
-```text
-React interface (Vite)
-    │ same-origin /api requests + HttpOnly session cookie
-    ▼
-Express API ───────► SQLite database in data/savor.sqlite
-    │
-    └── appointment authorization + meeting room information
-                    │
-                    ▼
-            Embedded Jitsi meeting
-            (external video service)
-```
-
-The server hashes passwords with scrypt, stores sessions on the server, checks roles and record access, and validates changes on the server. Browser refreshes preserve database records. Production sessions use Secure cookies. These are useful application controls; this student MVP does not claim medical, privacy, or clinical compliance.
-
-```text
-savor-care/
-├── src/                 React components and visual styling
-├── server/              API, authentication, database, demo seed
-├── tests/               Automated backend checks
-├── docs/DEMO-GUIDE.md    Presentation flow and acceptance checklist
-├── .env.example         Documented local configuration
-├── Dockerfile           Production image
-└── package.json         Dependencies and run commands
-```
+The public Jitsi service may require moderator sign-in. For a complete check, use two devices with headphones and verify audio and video in both directions. The app checks appointment access, but someone holding a public meeting link may be able to join outside the app. Real clinical use requires an appropriately reviewed video and privacy setup.
 
 ## Configuration
 
-Copy `.env.example` to `.env`. The server loads it automatically; environment variables supplied by your host take precedence. Keep `.env` out of source control.
+The server automatically loads a local `.env` file. Host-provided environment variables take precedence. Keep `.env` and database tokens out of Git and frontend code.
 
 | Variable | Purpose |
 | --- | --- |
-| `PORT` | Express port; default `3001` |
-| `DB_PATH` | Local SQLite path; ignored in Turso mode |
-| `DATABASE_DRIVER` | Set `turso` on Render to require cloud credentials; defaults to SQLite without credentials |
-| `TURSO_DATABASE_URL` | Exact Turso connection URL; server only |
-| `TURSO_AUTH_TOKEN` | Private database read/write token; server only |
-| `NODE_ENV` | `development` locally; `production` for HTTPS hosting |
-| `APP_ORIGIN` | Browser origin allowed to change application data; required for production |
-| `JITSI_DOMAIN` | Video server hostname; default `meet.jit.si` |
-| `SEED_DEMO` | `true` to create fictional classroom demo accounts and records |
-| `PROVIDER_EMAIL` | Clinician account email when provisioning without the demo |
-| `PROVIDER_PASSWORD` | Clinician password, at least 12 characters, when provisioning without the demo |
-| `PROVIDER_NAME` | Clinician display name when provisioning without the demo |
+| `PORT` | API port; defaults to `3001`. |
+| `NODE_ENV` | `development` locally; `production` for HTTPS hosting. |
+| `APP_ORIGIN` | Exact frontend origin allowed to make changes; required in production. |
+| `DATABASE_DRIVER` | `sqlite` or `turso`; without credentials, the default is SQLite. |
+| `DB_PATH` | Local SQLite file path; unused in Turso mode. |
+| `TURSO_DATABASE_URL` | Connection URL from the Turso database dashboard. |
+| `TURSO_AUTH_TOKEN` | Private read/write token for that database. |
+| `JITSI_DOMAIN` | Video server hostname; defaults to `meet.jit.si`. |
+| `SEED_DEMO` | `true` creates fictional classroom records on an empty database. |
+| `PROVIDER_EMAIL` | Dietitian email when provisioning without demo accounts. |
+| `PROVIDER_PASSWORD` | Initial dietitian password; at least 12 characters. |
+| `PROVIDER_NAME` | Initial dietitian display name. |
 
-Production disables demo seeding by default. Explicitly set `SEED_DEMO=true` only when hosting a synthetic classroom/portfolio demonstration. To provision without demo users, set `SEED_DEMO=false` and supply the provider variables. Changing the seed setting does not remove existing accounts or records from an existing database.
+For an empty database without demo users, set `SEED_DEMO=false` and supply the provider variables. Production disables demo seeding by default. Changing seed settings does **not** update or delete existing accounts, passwords, or records.
 
-## Free hosting with persistent Turso storage
+## Deployment
 
-Use the existing Render Free service plus Turso Free. See [TURSO-SETUP.md](docs/TURSO-SETUP.md) for database creation, private environment values, build/start commands, health checks, and restart verification. This needs no Render disk. An existing local SQLite database is not automatically copied into an empty cloud database.
+### Render with Turso
 
-The local test suite runs with `npm test`; `npm run test:libsql` repeats the workflows through the asynchronous database adapter against temporary local libSQL storage.
+The project is deployed at **[nutrition-finals.onrender.com](https://nutrition-finals.onrender.com)**. Its Turso connection has been confirmed through the live health check. A saved-record redeployment test is still required to complete persistence acceptance.
 
-## Alternative: deploy with a local SQLite disk
+| Render setting | Value |
+| --- | --- |
+| Branch | `main` |
+| Root Directory | Leave blank. |
+| Runtime | Node.js; set `NODE_VERSION=24`. |
+| Build Command | `npm ci --include=dev && npm run build` |
+| Start Command | `APP_ORIGIN="$RENDER_EXTERNAL_URL" npm start` |
 
-When using local SQLite instead of Turso, the app needs **one running instance** with a persistent, writable data directory. A static-only host cannot run its API. A host with an ephemeral filesystem will lose data when its container is replaced unless a persistent volume is attached.
+Set `NODE_ENV=production`, `DATABASE_DRIVER=turso`, `TURSO_DATABASE_URL`, and `TURSO_AUTH_TOKEN` in Render. Set `JITSI_DOMAIN=meet.jit.si` and choose the appropriate seed/provider configuration. Paste each environment value without surrounding quotation marks; the quotation marks in the shell start command above are intentional.
 
-With Docker:
+See **[Turso setup](docs/TURSO-SETUP.md)** for the full process. The server creates tables automatically. Existing local SQLite records are **not** automatically transferred to a new Turso database.
 
-```powershell
-docker build -t savor-care .
-docker volume create savor-care-data
-docker run -d --name savor-care -p 127.0.0.1:3001:3001 -v savor-care-data:/app/data -e APP_ORIGIN=https://your-domain.example -e SEED_DEMO=true savor-care
+### Local SQLite hosting alternative
+
+Local SQLite hosting needs one application instance with a persistent writable volume. An ephemeral filesystem can lose records when the instance is replaced. The included [Dockerfile](Dockerfile) supports container builds; mount persistent storage at `/app/data`, configure an HTTPS origin, and supply the environment values above. A static-only host cannot run this Express API.
+
+## Testing and verification
+
+### Automated checks
+
+```sh
+npm test
+npm run test:libsql
+npm run build
 ```
 
-Replace `https://your-domain.example` with your real HTTPS origin, without a trailing slash. Put an HTTPS reverse proxy in front of port 3001 and configure it to pass the original host and forwarded protocol. The container runs in production mode. Do not test this production cookie configuration by opening plain HTTP on a remote IP.
+The most recent recorded full SQLite test run passed **28 checks**. The earlier asynchronous libSQL run passed **27 checks**, before the additional startup-diagnostic test was added. These local checks do not prove a two-device video call or a deployed restart test.
 
-On a Node hosting service, select Node 24+, set the build command to `npm ci && npm run build`, the start command to `npm start`, and the production environment values above. Mount persistent storage, set `DB_PATH` to a database file inside that mount, and use the service's HTTPS URL as `APP_ORIGIN`. Ensure the service uses a single instance for this SQLite MVP.
+### Live acceptance checklist
 
-Before using real patient data, the project needs a deployment-specific review of identity verification, provider enrollment, consent, privacy policies, data retention/backups, access auditing, monitoring, and an appropriate authenticated video service. The included shared demo passwords are deliberately public.
+Use this checklist before presenting the deployed system:
+
+- [ ] Register and sign in as a patient.
+- [ ] Save a meal and confirm its totals in the food journal.
+- [ ] Book an appointment and review the patient as a dietitian.
+- [ ] Save a shared care plan and verify private SOAP sections stay hidden from the patient.
+- [ ] Confirm two-device audio and video in the same appointment.
+- [ ] Check the latest layout and sign-in changes after deployment.
+- [ ] Save an identifiable test record, redeploy, and confirm it remains.
+
+Earlier local browser results are documented in the [QA report](docs/QA-REPORT.md).
+
+### Health check
+
+Open **[/api/health](https://nutrition-finals.onrender.com/api/health)**. A working Turso connection returns:
+
+```json
+{"status":"ok","storage":"turso"}
+```
+
+The endpoint queries the database. `storage: "sqlite"` indicates local storage; an unavailable database returns HTTP `503`. A successful health response confirms connectivity, while the redeployment test checks persistence.
+
+## Project structure
+
+```text
+Nutrition_Finals/
+├── src/                 React interface and CSS
+├── public/              Public assets
+├── server/              Express API, authentication, database adapter, and seed data
+├── scripts/             Asynchronous libSQL test runner
+├── tests/               Automated API and database checks
+├── docs/                Setup, presentation, QA guides, and screenshots
+├── .env.example         Example environment configuration
+├── Dockerfile           Container build configuration
+├── package.json         Dependencies and commands
+└── README.md            Project guide
+```
 
 ## Troubleshooting
 
-- **`node:sqlite` cannot be found:** Install Node 24 or newer, reopen the terminal, and check `node --version`.
-- **The frontend cannot reach the API:** Run `npm run dev` from the project root and keep both services running. Check that port 3001 is available.
-- **A change is rejected after changing ports:** Set `APP_ORIGIN` to the actual address you use in the browser, then restart the server.
-- **Login does not persist on a deployed app:** Check HTTPS, `APP_ORIGIN`, and reverse-proxy forwarding. Production cookies require a secure connection.
-- **The video frame waits for a moderator:** Complete Jitsi's host sign-in flow or use your own configured Jitsi deployment.
-- **Camera or microphone unavailable:** Check browser/site permissions and whether another application is using the device.
-- **Database cannot be written:** Confirm the directory in `DB_PATH` exists or can be created, and that the app user has write permission.
+| Problem | What to check |
+| --- | --- |
+| `node:sqlite` is unavailable | Install Node.js 24+, reopen the terminal, and run `node --version`. An experimental SQLite warning alone is not a startup failure. |
+| Frontend cannot reach the API | Run `npm run dev` from the project root; confirm port 3001 is available and both services remain running. |
+| Requests fail after changing ports | Match `APP_ORIGIN` to the frontend address, then restart the server. |
+| Hosted login does not persist | Check HTTPS and `APP_ORIGIN`. Production cookies require a secure connection. |
+| Database initialization fails | Check the safe stage/error code in Render logs, the exact database URL, and a valid database read/write token. Keep tokens hidden. |
+| Health response lacks `storage` | Check the deployed commit and refresh. If deployed output still differs from the source, try a clean build through Render. |
+| Video waits for a moderator | Follow Jitsi moderator sign-in prompts or configure your own Jitsi service. |
+| Camera or microphone is unavailable | Check site permissions, HTTPS, and whether another application is using the device. |
+| Local SQLite cannot be written | Confirm the directory configured by `DB_PATH` is writable. |
 
-For **local SQLite only**, to start a fresh demonstration, stop the server, back up any records you want to keep, and move the `data` folder outside the project. Restart with `SEED_DEMO=true`; a new database will be created. This starts a new demo rather than preserving the old records.
+For a fresh **local SQLite** demonstration, stop the server, back up the database, move the `data` folder outside the project, and restart with `SEED_DEMO=true`. This creates a new database; it does not preserve the old records. It does not reset a Turso database.
+
+## Additional guides
+
+| Guide | Contents |
+| --- | --- |
+| [Presentation guide](docs/DEMO-GUIDE.md) | Classroom walkthrough and manual checks. |
+| [Turso setup](docs/TURSO-SETUP.md) | Cloud database configuration and persistence test. |
+| [Storage verification](docs/TURSO-VERIFICATION.md) | Historical adapter test results and verification limits. |
+| [QA report](docs/QA-REPORT.md) | Earlier browser checks, screenshots, and fixes. |
+| [Original verification notes](docs/VERIFICATION.md) | Earlier implementation checks. |
+
+Historical reports describe the state at the time they were written. For real patient use, further work is needed on identity verification, provider enrollment, consent, backups, auditing, monitoring, and deployment-specific privacy and security review.
