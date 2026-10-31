@@ -94,6 +94,30 @@ test('hydration persists and rejects fractional counts', async () => {
   assert.equal((await request('/api/water', { method: 'POST', cookie: patient, body: { date: clinicDate(1), glasses: 1 } })).status, 400);
 });
 
+test('patients can edit their own meal fields with validation and persisted results', async () => {
+  const original={name:'Tinola',type:'lunch',date:clinicDate(),time:'12:00',calories:0,protein:0,fiber:0,mood:'Content',note:'Original note'};
+  const created=await request('/api/meals',{method:'POST',cookie:patient,body:original});
+  const id=created.body.meal.id,path='/api/meals/'+id;
+  const updated={name:'Tinola with rice',type:'dinner',date:clinicDate(-1),time:'18:45',calories:480.5,protein:31.2,fiber:4,mood:'Satisfied',note:'Corrected portion.'};
+  assert.equal((await request(path,{method:'PATCH',body:updated})).status,401);
+  assert.equal((await request(path,{method:'PATCH',cookie:dietitian,body:updated})).status,403);
+  assert.equal((await request(path,{method:'PATCH',cookie:stranger,body:updated})).status,404);
+  const edited=await request(path,{method:'PATCH',cookie:patient,body:{...updated,id:'another-id',patientId:'someone-else'}});
+  assert.equal(edited.status,200);assert.deepEqual(edited.body.meal,{id,patientId:'patient-maya',...updated});
+  for(const patch of [{date:clinicDate(1)},{date:'2026-02-30'},{time:'24:00'},{calories:-1},{protein:'30'},{fiber:1001},{name:' '},{type:'brunch'},{mood:''}]) {
+    assert.equal((await request(path,{method:'PATCH',cookie:patient,body:{...updated,...patch}})).status,400);
+  }
+  const secondApp=await createApp({dbPath,seed:false,env:{NODE_ENV:'test'}});
+  try{assert.deepEqual({...await secondApp.locals.db.prepare('SELECT * FROM meals WHERE id=?').get(id)},{id,patientId:'patient-maya',...updated});}
+  finally{await secondApp.locals.close();}
+  const providerView=(await request('/api/dashboard',{cookie:dietitian})).body;
+  assert.equal(providerView.meals.find(m=>m.id===id).name,updated.name);
+  const cleared=await request(path,{method:'PATCH',cookie:patient,body:{...updated,calories:0,protein:0,fiber:0,note:''}});
+  assert.equal(cleared.body.meal.calories,0);assert.equal(cleared.body.meal.note,'');
+  await request(path,{method:'DELETE',cookie:patient});
+  assert.equal((await request(path,{method:'PATCH',cookie:patient,body:updated})).status,404);
+});
+
 test('booking uses future clinic slots, blocks conflicts, and cancellation frees the slot', async () => {
   const body = { date: clinicDate(2), time: '09:00', type: 'First nutrition consultation' };
   const initial = await request(`/api/availability?date=${body.date}`, { cookie: patient });

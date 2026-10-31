@@ -41,6 +41,12 @@ function numberField(value, name, max) {
   insist(typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= max, `${name} must be between 0 and ${max}.`);
   return Math.round(value * 10) / 10;
 }
+function mealFields(b) {
+  const fields = { name: textField(b.name, 'Meal name', 100), type: textField(b.type, 'Meal type', 20).toLowerCase(), date: validDate(b.date), time: validTime(b.time), calories: numberField(b.calories, 'Calories', 10000), protein: numberField(b.protein, 'Protein', 1000), fiber: numberField(b.fiber, 'Fiber', 1000), mood: textField(b.mood, 'Feeling', 40), note: textField(b.note, 'Note', 1000, false) };
+  insist(['breakfast', 'lunch', 'dinner', 'snack'].includes(fields.type), 'Choose breakfast, lunch, dinner, or snack.');
+  insist(fields.date <= clinicDate(), 'Meal entries cannot be dated in the future.');
+  return fields;
+}
 async function passwordHash(password) {
   const salt = randomBytes(16).toString('hex');
   const key = await scrypt(password, salt, 64);
@@ -264,12 +270,17 @@ export async function createApp(options = {}) {
     res.json({ meals, appointments, notes: visibleNotes, water, patients });
   });
   app.post('/api/meals', auth, role('patient'), async (req, res) => {
-    const b = req.body;
-    const meal = { id: randomUUID(), patientId: req.user.id, name: textField(b.name, 'Meal name', 100), type: textField(b.type, 'Meal type', 20).toLowerCase(), date: validDate(b.date), time: validTime(b.time), calories: numberField(b.calories, 'Calories', 10000), protein: numberField(b.protein, 'Protein', 1000), fiber: numberField(b.fiber, 'Fiber', 1000), mood: textField(b.mood, 'Feeling', 40), note: textField(b.note, 'Note', 1000, false) };
-    insist(['breakfast', 'lunch', 'dinner', 'snack'].includes(meal.type), 'Choose breakfast, lunch, dinner, or snack.');
-    insist(meal.date <= clinicDate(), 'Meal entries cannot be dated in the future.');
+    const meal = { id: randomUUID(), patientId: req.user.id, ...mealFields(req.body) };
     await db.prepare('INSERT INTO meals VALUES (?,?,?,?,?,?,?,?,?,?,?)').run(...Object.values(meal));
     res.status(201).json({ meal });
+  });
+  app.patch('/api/meals/:id', auth, role('patient'), async (req, res) => {
+    insist(await db.prepare('SELECT id FROM meals WHERE id=? AND patientId=?').get(req.params.id, req.user.id), 'Meal entry not found.', 404);
+    const fields = mealFields(req.body);
+    const result = await db.prepare('UPDATE meals SET name=?,type=?,date=?,time=?,calories=?,protein=?,fiber=?,mood=?,note=? WHERE id=? AND patientId=?')
+      .run(...Object.values(fields), req.params.id, req.user.id);
+    insist(result.changes > 0, 'Meal entry not found.', 404);
+    res.json({ meal: { id: req.params.id, patientId: req.user.id, ...fields } });
   });
   app.delete('/api/meals/:id', auth, role('patient'), async (req, res) => {
     const result = await db.prepare('DELETE FROM meals WHERE id=? AND patientId=?').run(req.params.id, req.user.id);

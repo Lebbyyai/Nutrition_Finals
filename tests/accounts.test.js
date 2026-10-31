@@ -41,6 +41,7 @@ test('admin bootstrap preserves seeded clinical records and has no clinical dash
   const dashboard=await f.request('/dashboard',{cookie:admin.cookie});assert.deepEqual(dashboard.json.meals,[]);assert.deepEqual(dashboard.json.notes,[]);
   assert.equal((await f.app.locals.db.prepare('SELECT COUNT(*) AS total FROM meals').get()).total,7);
   assert.equal((await f.request('/notes',{method:'POST',cookie:admin.cookie,body:{}})).status,403);
+  assert.equal((await f.request('/meals/missing',{method:'PATCH',cookie:admin.cookie,body:{}})).status,403);
   const logout=await f.request('/auth/logout',{method:'POST',cookie:admin.cookie,body:{}});assert.equal(logout.status,200);
   assert.equal((await f.request('/admin/accounts',{cookie:admin.cookie})).status,401);
 });

@@ -56,7 +56,7 @@ Patients can register through the website. Dietitian accounts are created by an 
 | Feature | Description |
 | --- | --- |
 | **Overview** | A summary of daily meal entries, nutrition estimates, hydration, and the next appointment. |
-| **Food journal** | Meal entries with dates, times, feelings, notes, and optional nutrition estimates. |
+| **Food journal** | Add, edit, search, and remove meals with dates, times, feelings, notes, and optional nutrition estimates. |
 | **Hydration log** | A daily record of glasses of water. |
 | **Appointments** | Available 30-minute consultation slots, cancellation, and appointment status. |
 | **Patient charts** | A dietitian workspace for reviewing assigned patients and documenting care. |
@@ -93,6 +93,15 @@ The **Overview** page shows your logged meals, estimated nutrition totals, water
 Nutrition values are entered manually; the website does not automatically calculate them from the meal name. Totals reflect the estimates you provide.
 
 In **Food journal**, choose a date or search by meal name to find an entry. You can also remove entries you no longer need.
+
+### Edit a logged meal
+
+1. Find the entry in **Food journal**, or in the meal preview on **Overview**.
+2. Select the **pencil icon** beside the meal.
+3. Update the meal name, type, date, time, feeling, nutrition estimates, or note.
+4. Select **Save changes**, or **Cancel** to leave the saved entry unchanged.
+
+The form starts with the saved details. Saving updates the existing entry and refreshes the nutrition totals. If you change its date, use that date in the journal filter to find it. Patients can edit only their own entries.
 
 ### Track your water
 

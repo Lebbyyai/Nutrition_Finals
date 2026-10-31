@@ -13,6 +13,10 @@
 .sidebar>*{flex-shrink:0}
 .main{min-width:0}
 .page-content{padding-bottom:24px}
+.meal-actions{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.meal-actions .icon-button{margin-left:0}
+.edit-button:hover{background:#eaf0e3;color:var(--green)}
+@media(max-width:480px){.meal-actions{flex-direction:column;gap:2px}.meal-actions .icon-button{width:30px;height:30px}}
 .google-button{border:1px solid #dfe4d7;background:#fffefb;text-decoration:none;margin-top:24px;gap:12px}
 .google-button:hover{background:#f4f6ef}
 .google-button.unavailable{opacity:.6;cursor:not-allowed}

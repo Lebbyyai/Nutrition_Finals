@@ -29,7 +29,7 @@ A full-stack tele-nutrition platform that connects patients and dietitians throu
 | Administration | An owner-provisioned admin can create dietitian accounts and manage patient assignments. |
 | Password recovery | Patients, dietitians, and admins can request single-use recovery links when Gmail delivery is configured. |
 | Overview | Review daily meal totals, hydration, and the next consultation. |
-| Food journal | Add, search, filter by date, and remove personal meal entries. Record estimated calories, protein, fiber, mood, and notes. |
+| Food journal | Add, edit, search, filter by date, and remove personal meal entries. Record estimated calories, protein, fiber, mood, and notes. |
 | Hydration | Add or remove glasses in a daily water log. |
 | Appointments | Book available 30-minute clinic slots and cancel scheduled visits. Dietitians can mark visits complete. |
 | Patient charts | Dietitians can review assigned patients and record SOAP notes. |
@@ -232,7 +232,7 @@ npm run test:libsql
 npm run build
 ```
 
-The expanded account-management suite passes **43 checks with SQLite** and **43 checks with asynchronous local libSQL**. The production build passes. Google verification and Gmail delivery are mocked in tests; live acceptance requires owner configuration. See [account verification](ACCOUNT-VERIFICATION.md).
+The expanded account-management suite passes **44 checks with SQLite** and **44 checks with asynchronous local libSQL**. The production build passes. Google verification and Gmail delivery are mocked in tests; live acceptance requires owner configuration. See [account verification](ACCOUNT-VERIFICATION.md).
 
 ### Live acceptance checklist
 
