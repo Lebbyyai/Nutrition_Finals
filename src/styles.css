@@ -7,3 +7,41 @@
 @media(max-width:480px){.page-content{padding:24px 16px 0}.topbar{padding:0 16px}.demo-badge{font-size:7px;padding:5px 8px}.avatar.mini{width:28px;height:28px}.page-heading{flex-wrap:wrap}.page-heading h1{font-size:25px;line-height:1.35}.page-heading p{max-width:300px}.page-heading>.button{padding:10px 13px}.hero-card{min-height:365px}.hero-copy{padding:24px;width:100%}.hero-copy h2{font-size:32px}.hero-copy>p{max-width:190px;font-size:10px}.hero-copy .button{font-size:9px;max-width:210px;position:relative;z-index:4}.hero-visual{width:54%;top:110px;right:-23px;bottom:10px;opacity:.9}.orbit-text{display:none}.ingredient-label{bottom:13px;right:25px;font-size:6px}.hero-foot{font-size:7px;margin-top:20px}.hero-copy .pill{font-size:7px}.stats-grid{gap:8px}.stat{padding:13px 10px}.stat-icon{height:29px;width:29px;margin-bottom:11px}.stats-grid .stat-label{font-size:8px;line-height:1.4;display:block}.stat-number{font-size:25px}.stat-number small{font-size:8px;margin-left:3px}.stat p{font-size:7px;line-height:1.6}.section-title h2{font-size:15px}.section-title .text-button{font-size:9px}.section-title>span{font-size:8px}.meal-row{padding:16px 13px;gap:10px}.meal-symbol{height:35px;width:35px;font-size:23px;border-radius:9px}.meal-info h3{font-size:11px}.meal-info p{max-width:170px;font-size:8px}.meal-nutrition strong{font-size:10px}.meal-nutrition>span{font-size:7px}.overview-side{grid-template-columns:1fr}.appointment-card{padding:22px}.provider-line h3{font-size:13px}.provider-line p{font-size:10px}.appointment-detail{font-size:11px}.session-tag{font-size:10px}.appointment-card .button{font-size:11px}.quiet-note{font-size:9px}.water-card{padding:22px}.water-drops{max-width:300px}.water-controls button{padding:10px}.reflection{display:block}.filter-bar{flex-direction:column;align-items:stretch;gap:14px}.search-input{max-width:100%}.date-filter{justify-content:space-between}.date-filter input{flex:1;max-width:180px}.journal-banner,.care-intro{padding:22px;gap:14px}.journal-banner h3{font-size:14px}.journal-banner p{font-size:10px}.journal-banner>svg{width:24px}.journal-list .meal-row{padding:16px 12px}.delete-button{width:25px;margin-left:0}.tabs{gap:25px}.tabs button{font-size:11px}.appointment-list-card{gap:14px;padding:18px}.appointment-info h3{font-size:14px}.appointment-info p{font-size:10px}.date-tile{width:52px;height:65px}.appointment-actions{margin-left:0;width:100%;justify-content:flex-end}.appointment-actions>.button{font-size:10px;padding:10px 12px}.editorial-note{padding:22px;gap:12px}.editorial-note h3{font-size:13px}.editorial-note p{font-size:11px}.form-grid{gap:0 10px}.form-grid label{font-size:10px}.modal>h2{font-size:23px}.modal form input,.modal form select{font-size:11px;padding:11px 9px}.time-slots{grid-template-columns:repeat(3,1fr)}.form-grid.thirds{gap:8px}.form-grid.thirds label{font-size:9px}.auth-editorial .plate-art{width:120px;right:-25px;bottom:-20px;opacity:.65}.auth-editorial h1{font-size:27px}.auth-story{min-height:260px}.care-intro h2{font-size:19px}.care-intro p{font-size:11px}.patient-header{align-items:flex-start;gap:10px}.patient-header h2{font-size:22px}.patient-header .eyebrow{font-size:8px}.patient-header .button{font-size:9px;padding:11px 10px}.toast{font-size:11px;width:max-content}.modal.wide{padding:25px 18px}footer{font-size:7px;gap:10px}}
 @media(max-width:600px){.hero-card{min-height:370px}.hero-copy h2{font-size:30px}.hero-visual{width:40%;top:165px;bottom:15px;right:-2px}.hero-copy>p{max-width:225px}.hero-copy{padding:25px}.orbit-text,.ingredient-label{display:none}.hero-foot{max-width:230px;font-size:7px}.hero-copy .button{font-size:9px}.page-heading h1{font-size:23px}.page-heading{flex-wrap:wrap}.page-heading>.button{padding:10px 14px}.hero-visual .plate-art{transform:rotate(-9deg) scale(1.12)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+/* Keep every navigation and account action reachable, including at browser zoom. */
+.sidebar{overflow-y:auto;overscroll-behavior-y:contain;scrollbar-width:thin}
+.sidebar>*{flex-shrink:0}
+.main{min-width:0}
+.page-content{padding-bottom:24px}
+
+/* Use the available height as well as width when sizing a desktop workspace. */
+@media(min-width:761px) and (max-height:850px){
+  .sidebar{padding-top:24px}
+  .sidebar .brand{margin-bottom:28px}
+  .workspace-label{margin-bottom:12px}
+  .sidebar nav{gap:5px}
+  .sidebar nav button{padding-top:11px;padding-bottom:11px}
+  .sidebar-bottom{padding-top:20px}
+  .side-note{display:none}
+  .topbar{height:60px}
+  .page-content{padding-top:24px}
+  .page-heading{margin-bottom:20px}
+  .page-heading .eyebrow{margin-bottom:7px}
+  .hero-card{min-height:270px}
+  .hero-copy{padding:22px 24px;min-width:54%}
+  .hero-copy h2{font-size:30px;margin-top:12px}
+  .hero-copy>p{font-size:11px;margin:10px 0 14px;max-width:250px}
+  .hero-copy .button{font-size:10px;padding:10px 13px}
+  .hero-foot{margin-top:14px}
+  .hero-visual{width:43%;top:0;right:0}
+  .hero-visual .plate-art{max-height:300px;transform:rotate(-9deg) scale(1.03)}
+  .orbit-text{top:16px;font-size:7px}
+  .ingredient-label{bottom:18px;right:18px}
+  .section-title{margin-top:20px;margin-bottom:12px}
+  .section-title.compact{margin-top:0}
+  .stat{padding:14px 16px}
+  .stat-icon{margin-bottom:10px}
+  .appointment-card{padding:20px}
+  .appointment-card .empty{padding:20px 8px}
+  .water-card{padding:18px 20px}
+}
