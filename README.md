@@ -1,306 +1,228 @@
 # Savor Care
 
-**Familiar food. A little more care.**
+### Nutrition, with you in mind.
 
-A full-stack tele-nutrition platform that connects patients and dietitians through food journaling, appointment scheduling, shared care plans, and video consultations. Built as a finals project, with original illustrations and content inspired by everyday Filipino meals.
+**Savor Care** is a tele-nutrition website that brings everyday food habits and professional guidance into one shared care experience. Patients can keep a food journal, track hydration, book appointments, read their care plans, and connect with a dietitian through online consultations.
 
-[Open website](https://nutrition-finals.onrender.com) · [Health check](https://nutrition-finals.onrender.com/api/health) · [Presentation guide](docs/DEMO-GUIDE.md)
+The website takes inspiration from familiar Filipino meals and real daily routines. Its warm colors, original food illustrations, and welcoming language encourage users to reflect on their habits with curiosity and without judgment.
 
-> **Project scope:** This is a student MVP. Use fictional information for demonstrations. Educational nutrition content does not replace individual professional advice.
+**[Visit Savor Care](https://nutrition-finals.onrender.com)**
 
 ## Contents
 
-- [Features](#features)
-- [Technology](#technology)
-- [Local setup](#local-setup)
-- [Using the system](#using-the-system)
-- [Configuration](#configuration)
-- [Deployment](#deployment)
-- [Testing and verification](#testing-and-verification)
-- [Project structure](#project-structure)
-- [Troubleshooting](#troubleshooting)
-- [Additional guides](#additional-guides)
+- [What is Savor Care?](#what-is-savor-care)
+- [Purpose of the website](#purpose-of-the-website)
+- [Who can use it?](#who-can-use-it)
+- [Main features](#main-features)
+- [Getting started](#getting-started)
+- [Patient guide](#patient-guide)
+- [Dietitian guide](#dietitian-guide)
+- [Administrator guide](#administrator-guide)
+- [Password recovery](#password-recovery)
+- [Video consultation guide](#video-consultation-guide)
+- [Frequently asked questions](#frequently-asked-questions)
+- [Project information](#project-information)
 
-## Features
+## What is Savor Care?
 
-| Feature | What users can do |
+Savor Care is a digital space for ongoing nutrition support. It connects what a patient experiences between appointments with the guidance a dietitian provides during consultations.
+
+A patient might record a bowl of tinola, note how satisfied they felt, and bring that experience into a conversation with their dietitian. The dietitian can review the journal, record observations, and share practical next steps through a care plan. These activities connect through the same website so users can return to their information over time.
+
+## Purpose of the website
+
+Savor Care was created to:
+
+- **Make nutrition support easier to access** through appointment scheduling and online consultations.
+- **Encourage awareness of everyday habits** through food journaling and hydration tracking.
+- **Support continuity of care** by connecting patient entries, dietitian notes, and shared plans.
+- **Respect familiar foods and routines** by using examples that fit everyday Filipino life.
+- **Organize the care team** through administrator-managed dietitian accounts and patient assignments.
+
+The goal is to help patients and dietitians have more informed, personal conversations about food and wellbeing.
+
+## Who can use it?
+
+| Account | Purpose |
 | --- | --- |
-| Accounts | Register as a patient, sign in with a password or configured Google account, and sign out using server-side sessions. |
-| Administration | An owner-provisioned admin can create dietitian accounts and manage patient assignments. |
-| Password recovery | Patients, dietitians, and admins can request single-use recovery links when Gmail delivery is configured. |
-| Overview | Review daily meal totals, hydration, and the next consultation. |
-| Food journal | Add, search, filter by date, and remove personal meal entries. Record estimated calories, protein, fiber, mood, and notes. |
-| Hydration | Add or remove glasses in a daily water log. |
-| Appointments | Book available 30-minute clinic slots and cancel scheduled visits. Dietitians can mark visits complete. |
-| Patient charts | Dietitians can review assigned patients and record SOAP notes. |
-| Shared care plans | Patients can read the plan from shared notes; private SOAP sections remain restricted to the provider. |
-| Video consultations | Open an appointment-specific Jitsi meeting from either account. |
-| Reading room | Read original articles about familiar food, journaling, and consultation preparation. |
-| Responsive interface | Use desktop, laptop, and mobile layouts, with scrolling navigation on shorter windows. |
+| **Patient** | Record meals, track water, book consultations, and read shared care plans. |
+| **Dietitian** | Review assigned patients, write clinical notes, share plans, and conduct consultations. |
+| **Administrator** | Create dietitian accounts and manage patient assignments. |
 
-## Technology
+Patients can register through the website. Dietitian accounts are created by an administrator. The website owner provisions the first administrator account; there is no public administrator registration.
 
-| Layer | Technology |
+## Main features
+
+| Feature | Description |
 | --- | --- |
-| Programming language | JavaScript, including React JSX |
-| Interface | React, CSS, Lucide icons, and original SVG illustrations |
-| Frontend tooling | Vite |
-| Server | Node.js 24+ and Express |
-| Database | SQLite for local development; Turso for hosted storage |
-| Video | Jitsi External API |
-| Authentication | scrypt password hashing and HttpOnly cookie sessions |
-| Deployment | Render web service connected to GitHub |
+| **Overview** | A summary of daily meal entries, nutrition estimates, hydration, and the next appointment. |
+| **Food journal** | Meal entries with dates, times, feelings, notes, and optional nutrition estimates. |
+| **Hydration log** | A daily record of glasses of water. |
+| **Appointments** | Available 30-minute consultation slots, cancellation, and appointment status. |
+| **Patient charts** | A dietitian workspace for reviewing assigned patients and documenting care. |
+| **Care plan** | Practical guidance shared by the patient's dietitian. |
+| **Video consultations** | Appointment-specific online meeting rooms powered by Jitsi. |
+| **The reading room** | Original articles about familiar food, journaling, and preparing for consultations. |
+| **Account management** | An admin workspace for creating dietitian accounts and assigning patients. |
+| **Sign-in and recovery** | Password sign-in, plus Google sign-in and email recovery when configured by the owner. |
 
-```text
-React interface ── /api requests ──► Express API ──► SQLite or Turso
-                                          │
-                                          └── Appointment access ──► Jitsi meeting
-```
+## Getting started
 
-## Local setup
+1. Open **[Savor Care](https://nutrition-finals.onrender.com)** in your browser.
+2. Select **Create an account** if you are a new patient.
+3. Enter your name, email address, and a password of at least **12 characters**.
+4. Submit the form to enter your workspace.
+5. Returning users can sign in with their email and password. If available, select **Continue with Google** instead.
 
-### Requirements
+New Google users receive patient access. Using Google does not grant administrator or dietitian privileges. Authorized existing Gmail or Google Workspace accounts can retain their assigned role when signing in through Google.
 
-- Node.js **24 or newer**, with npm.
-- VS Code or another code editor.
-- Internet access for installing dependencies and using video calls.
+## Patient guide
 
-### 1. Open the project
+### Review your overview
 
-Clone the repository, then open the folder in VS Code:
+The **Overview** page shows your logged meals, estimated nutrition totals, water log, and next appointment. Use it as a starting point for your daily check-in.
 
-```sh
-git clone https://github.com/Lebbyyai/Nutrition_Finals.git
-cd Nutrition_Finals
-```
+### Log a meal
 
-If you downloaded a ZIP, extract it and open the folder containing `package.json`.
+1. Select **Log a meal**, or open **Food journal**.
+2. Enter the meal name, type, date, and time.
+3. Choose how the meal made you feel.
+4. Optionally enter calorie, protein, and fiber estimates.
+5. Add a note about your experience, then save the entry.
 
-### 2. Create the local configuration
+Nutrition values are entered manually; the website does not automatically calculate them from the meal name. Totals reflect the estimates you provide.
 
-In the VS Code terminal, copy the example configuration.
+In **Food journal**, choose a date or search by meal name to find an entry. You can also remove entries you no longer need.
 
-**Windows PowerShell:**
+### Track your water
 
-```powershell
-Copy-Item .env.example .env
-```
+From **Overview**, find **A moment to hydrate**. Select **Add a glass** to record water, or the minus button to correct the count. This is a personal log, not a prescribed daily target.
 
-**macOS / Linux:**
+### Book an appointment
 
-```sh
-cp .env.example .env
-```
+1. Open **Appointments** and select **Book a check-in**.
+2. Choose the consultation type and date.
+3. Select an available time and confirm the booking.
+4. Return to **Appointments** to view the visit or open its meeting room.
 
-The example configuration uses local SQLite. Cloud credentials are optional for local development.
+All clinic times use **Philippine time (UTC+8)**. Only future available slots can be booked. Cancel a scheduled appointment if you cannot attend.
 
-### 3. Install and run
+### Read your care plan
 
-```sh
-npm ci
-npm run dev
-```
+Open **Care plan** to view guidance your dietitian has shared. New shared plans appear after the dietitian saves them. Private clinical sections are not shown in the patient workspace.
 
-Open **[http://localhost:5173](http://localhost:5173)** and leave the terminal running. Press **Ctrl + C** in the terminal to stop the app.
+### Explore the reading room
 
-The interface runs on port **5173** and the API on **3001**. Vite forwards API requests to Express. The server creates the local database and, when enabled, fictional seed records on the first run.
+Open **The reading room** and choose an article. Topics include familiar Filipino meals, keeping a useful journal, and preparing for a consultation.
 
-### Available commands
+## Dietitian guide
 
-| Command | Purpose |
+### Access your account
+
+Request an account from the website administrator. Sign in using the email and initial password provided privately to you. Google sign-in may also be available for an authorized matching Gmail or Workspace account.
+
+### Review an assigned patient
+
+1. Open **Patient charts**.
+2. Select a patient from your care list.
+3. Review their recent food journal and existing clinical notes.
+
+Patients appear according to their assignments. Contact the administrator if an expected patient is missing.
+
+### Write a clinical note
+
+1. Select **Add clinical note** for the patient.
+2. Complete the SOAP sections:
+
+   | Section | What to record |
+   | --- | --- |
+   | **Subjective** | The patient's experiences, preferences, and reported concerns. |
+   | **Objective** | Documented observations and available measurements. |
+   | **Assessment** | Your clinical interpretation. |
+   | **Plan** | Agreed next steps written clearly for the patient. |
+
+3. Choose whether to **Share the plan section with the patient**.
+4. Save the note.
+
+When sharing is enabled, the patient receives the **Plan** section. Subjective, Objective, and Assessment remain private within the provider workflow.
+
+### Conduct a consultation
+
+Open **Appointments**, choose the relevant visit, and select **Open room**. After the consultation, save the appropriate clinical notes and mark the appointment **Complete**.
+
+## Administrator guide
+
+### Create a dietitian account
+
+1. Sign in with your administrator account.
+2. Select **Add a dietitian**.
+3. Enter the dietitian's full name, email, and initial password.
+4. Confirm with your own administrator password.
+5. Create the account and share the initial credentials privately with its owner.
+
+The new account can then sign in to the dietitian workspace. Once recovery email is available, the dietitian can use **Forgot password?** to choose a new password.
+
+### Assign a patient
+
+1. Open **Patient assignments**.
+2. Find the patient.
+3. Choose a dietitian from the list.
+4. Select **Save assignment**.
+
+Finish or cancel the patient's scheduled visits before changing their assignment. Existing appointments and notes retain their original provider.
+
+The administrator workspace manages accounts and assignments. Clinical charting remains in the dietitian workspace.
+
+## Password recovery
+
+Password recovery is available to **patients, dietitians, and administrators** once the owner configures recovery emails.
+
+1. On the sign-in page, select **Forgot password?**.
+2. Enter the email used for your account.
+3. Check your inbox and spam folder for a recovery message.
+4. Open the link within **30 minutes**.
+5. Enter and confirm a new password of at least **12 characters**.
+6. Return to sign-in and use your new password.
+
+Each link works once. A successful reset signs out existing sessions, and the old password stops working. If a link expires, request a new one. If recovery is unavailable or no message arrives, contact the website owner.
+
+## Video consultation guide
+
+1. Use a quiet space and a stable internet connection.
+2. Open the **same appointment** from the patient and dietitian accounts.
+3. Select **Open room** and review the video-service notice.
+4. Continue to the meeting and allow camera and microphone access when prompted.
+5. Use headphones to reduce feedback.
+
+The dietitian may need to sign in with Jitsi to start the meeting. If the embedded room does not load, use **Open the same room in a new tab**. For a two-person test, use separate devices or browser profiles.
+
+## Frequently asked questions
+
+| Question | Answer |
 | --- | --- |
-| `npm run dev` | Start the frontend and API for development. |
-| `npm run build` | Build the production frontend into `dist/`. |
-| `npm start` | Serve the built frontend and API with Express. |
-| `npm test` | Run the automated backend checks. |
-| `npm run test:libsql` | Run checks through the asynchronous adapter using temporary local libSQL databases. |
+| **Can a patient register as a dietitian or administrator?** | No. Dietitian accounts are created by an administrator, and the owner provisions the first admin. |
+| **Why is Google sign-in unavailable?** | The owner must finish the Google integration setup before it becomes available. Password sign-in remains available. |
+| **Why are my nutrition totals zero?** | Meal names do not generate nutrition values automatically. Totals use the optional estimates entered with each meal. |
+| **Why is a patient missing from my care list?** | The patient must be assigned to that dietitian. Ask the administrator to review the assignment. |
+| **Can patients see private SOAP notes?** | Patients receive only the Plan section of notes explicitly shared with them. |
+| **Will my meals remain after signing out?** | Saved records are kept in the database. The owner also confirmed that a saved Tinola entry survived a Render redeployment. |
+| **Where do I sign out?** | Use the sign-out control beside your account name in the sidebar, or in the admin header. |
 
-To preview the built app locally, run `npm run build`, set `APP_ORIGIN=http://localhost:3001` in `.env`, keep `NODE_ENV=development`, and run `npm start`. Open **[http://localhost:3001](http://localhost:3001)**. Restore `APP_ORIGIN=http://localhost:5173` before returning to `npm run dev`.
+## Project information
 
-## Using the system
+Savor Care was developed as a **Tele-nutrition Gateway and Platform Assembly finals project**. It demonstrates the connected workflow of patient registration, meal logging, scheduling, provider charting, and virtual consultation.
 
-### Patient workflow
+The interface uses React and CSS, the server uses Node.js and Express, and hosted records use Turso. Video meetings use the external Jitsi service.
 
-1. Choose **Create an account**, or sign in with an existing patient account.
-2. Select **Log a meal** or open **Food journal** to record a meal.
-3. Update the water log from **Overview**.
-4. Open **Appointments** to book an available consultation.
-5. Open **Care plan** to read plans shared by the dietitian.
-6. Open the consultation room for the booked appointment.
+This is a student MVP intended for fictional demonstrations. It has not been established as a clinically approved platform for real patient care.
 
-### Dietitian workflow
-
-1. Sign in with a provisioned dietitian account.
-2. Open **Patient charts** and select an assigned patient.
-3. Review the journal and write SOAP notes.
-4. Share a care plan when appropriate. Patients receive the plan, not the private subjective, objective, or assessment sections.
-5. Open the same appointment to join the consultation, then mark the visit complete when finished.
-
-Public registration creates patient accounts. Administrators create dietitian accounts from the admin workspace; the seed configuration below can also provision an initial classroom provider.
-
-### Administrator workflow
-
-1. Configure the first owner account through private Render environment variables.
-2. Sign in through the normal sign-in page.
-3. Select **Add a dietitian** and confirm creation with your administrator password.
-4. Use **Patient assignments** to connect registered patients to a dietitian.
-
-See [Admin, Google, and Gmail setup](docs/ADMIN-GOOGLE-SETUP.md) for the private configuration and complete instructions.
-
-### Google sign-in and password recovery
-
-**Continue with Google** becomes available when the owner configures a Google OAuth web client. New Google users receive patient access; existing authorized Gmail/Workspace accounts retain their role.
-
-Choose **Forgot password?** to request a recovery email. Links expire after 30 minutes, work once, and revoke previous sessions when used. Gmail delivery needs a separate send-only OAuth authorization from the sender mailbox owner. These external services require owner configuration before live use.
-
-### Classroom accounts
-
-When `SEED_DEMO=true` initializes an empty database, these fictional accounts are created:
-
-| Role | Email | Password |
-| --- | --- | --- |
-| Patient | `maya@example.com` | `SavorDemo123!` |
-| Dietitian | `alex@example.com` | `SavorDemo123!` |
-
-The sign-in page no longer displays demo shortcuts. Enter these credentials manually if the accounts exist in your database. Their passwords are public and intended only for fictional classroom demonstrations.
-
-Use separate browser profiles, a private window, or separate devices to test both roles. Tabs in the same browser profile share a login session.
-
-### Video consultations
-
-Join the **same appointment** from the patient and dietitian accounts. Allow camera and microphone access when prompted. Hosted camera access requires HTTPS; localhost is suitable for development.
-
-The public Jitsi service may require moderator sign-in. For a complete check, use two devices with headphones and verify audio and video in both directions. The app checks appointment access, but someone holding a public meeting link may be able to join outside the app. Real clinical use requires an appropriately reviewed video and privacy setup.
-
-## Configuration
-
-The server automatically loads a local `.env` file. Host-provided environment variables take precedence. Keep `.env` and database tokens out of Git and frontend code.
-
-| Variable | Purpose |
-| --- | --- |
-| `PORT` | API port; defaults to `3001`. |
-| `NODE_ENV` | `development` locally; `production` for HTTPS hosting. |
-| `APP_ORIGIN` | Exact frontend origin allowed to make changes; required in production. |
-| `DATABASE_DRIVER` | `sqlite` or `turso`; without credentials, the default is SQLite. |
-| `DB_PATH` | Local SQLite file path; unused in Turso mode. |
-| `TURSO_DATABASE_URL` | Connection URL from the Turso database dashboard. |
-| `TURSO_AUTH_TOKEN` | Private read/write token for that database. |
-| `JITSI_DOMAIN` | Video server hostname; defaults to `meet.jit.si`. |
-| `SEED_DEMO` | `true` creates fictional classroom records on an empty database. |
-| `PROVIDER_EMAIL` | Dietitian email when provisioning without demo accounts. |
-| `PROVIDER_PASSWORD` | Initial dietitian password; at least 12 characters. |
-| `PROVIDER_NAME` | Initial dietitian display name. |
-| `ADMIN_EMAIL` | First administrator email; use an address not already registered as a clinical user. |
-| `ADMIN_PASSWORD` | Private first-admin password, at least 12 characters; remove after initial setup. |
-| `ADMIN_NAME` | First administrator display name. |
-| `GOOGLE_CLIENT_ID` | Google OAuth web client ID. |
-| `GOOGLE_CLIENT_SECRET` | Private Google OAuth client secret. |
-| `GMAIL_FROM` | Authorized sender mailbox for recovery emails. |
-| `GMAIL_REFRESH_TOKEN` | Private send-only Gmail OAuth refresh token. |
-
-For an empty database without demo users, set `SEED_DEMO=false` and supply the provider variables. Production disables demo seeding by default. Changing seed settings does **not** update or delete existing accounts, passwords, or records.
-
-## Deployment
-
-### Render with Turso
-
-The project is deployed at **[nutrition-finals.onrender.com](https://nutrition-finals.onrender.com)**. Its Turso connection has been confirmed through the live health check. The owner also confirmed that a saved Tinola entry survived a Render redeployment.
-
-| Render setting | Value |
-| --- | --- |
-| Branch | `main` |
-| Root Directory | Leave blank. |
-| Runtime | Node.js; set `NODE_VERSION=24`. |
-| Build Command | `npm ci --include=dev && npm run build` |
-| Start Command | `APP_ORIGIN="$RENDER_EXTERNAL_URL" npm start` |
-
-Set `NODE_ENV=production`, `DATABASE_DRIVER=turso`, `TURSO_DATABASE_URL`, and `TURSO_AUTH_TOKEN` in Render. Set `JITSI_DOMAIN=meet.jit.si` and choose the appropriate seed/provider configuration. Paste each environment value without surrounding quotation marks; the quotation marks in the shell start command above are intentional.
-
-See **[Turso setup](docs/TURSO-SETUP.md)** for the full process. The server creates tables automatically. Existing local SQLite records are **not** automatically transferred to a new Turso database.
-
-### Local SQLite hosting alternative
-
-Local SQLite hosting needs one application instance with a persistent writable volume. An ephemeral filesystem can lose records when the instance is replaced. The included [Dockerfile](Dockerfile) supports container builds; mount persistent storage at `/app/data`, configure an HTTPS origin, and supply the environment values above. A static-only host cannot run this Express API.
-
-## Testing and verification
-
-### Automated checks
-
-```sh
-npm test
-npm run test:libsql
-npm run build
-```
-
-The expanded account-management suite passes **43 checks with SQLite** and **43 checks with asynchronous local libSQL**. The production build passes. Google verification and Gmail delivery are mocked in tests; live acceptance requires owner configuration. See [account verification](docs/ACCOUNT-VERIFICATION.md).
-
-### Live acceptance checklist
-
-Use this checklist before presenting the deployed system:
-
-- [ ] Register and sign in as a patient.
-- [ ] Save a meal and confirm its totals in the food journal.
-- [ ] Book an appointment and review the patient as a dietitian.
-- [ ] Save a shared care plan and verify private SOAP sections stay hidden from the patient.
-- [ ] Confirm two-device audio and video in the same appointment.
-- [ ] Check the latest layout and sign-in changes after deployment.
-- [x] Save an identifiable test record, redeploy, and confirm it remains (owner-reported Tinola test).
-- [ ] Configure and verify the first admin, dietitian creation, Google sign-in, and real recovery-email delivery.
-
-Earlier local browser results are documented in the [QA report](docs/QA-REPORT.md).
-
-### Health check
-
-Open **[/api/health](https://nutrition-finals.onrender.com/api/health)**. A working Turso connection returns:
-
-```json
-{"status":"ok","storage":"turso"}
-```
-
-The endpoint queries the database. `storage: "sqlite"` indicates local storage; an unavailable database returns HTTP `503`. A successful health response confirms connectivity, while the redeployment test checks persistence.
-
-## Project structure
-
-```text
-Nutrition_Finals/
-├── src/                 React interface and CSS
-├── public/              Public assets
-├── server/              Express API, authentication, database adapter, and seed data
-├── scripts/             Asynchronous libSQL test runner
-├── tests/               Automated API and database checks
-├── docs/                Setup, presentation, QA guides, and screenshots
-├── .env.example         Example environment configuration
-├── Dockerfile           Container build configuration
-├── package.json         Dependencies and commands
-└── README.md            Project guide
-```
-
-## Troubleshooting
-
-| Problem | What to check |
-| --- | --- |
-| `node:sqlite` is unavailable | Install Node.js 24+, reopen the terminal, and run `node --version`. An experimental SQLite warning alone is not a startup failure. |
-| Frontend cannot reach the API | Run `npm run dev` from the project root; confirm port 3001 is available and both services remain running. |
-| Requests fail after changing ports | Match `APP_ORIGIN` to the frontend address, then restart the server. |
-| Hosted login does not persist | Check HTTPS and `APP_ORIGIN`. Production cookies require a secure connection. |
-| Database initialization fails | Check the safe stage/error code in Render logs, the exact database URL, and a valid database read/write token. Keep tokens hidden. |
-| Health response lacks `storage` | Check the deployed commit and refresh. If deployed output still differs from the source, try a clean build through Render. |
-| Video waits for a moderator | Follow Jitsi moderator sign-in prompts or configure your own Jitsi service. |
-| Camera or microphone is unavailable | Check site permissions, HTTPS, and whether another application is using the device. |
-| Local SQLite cannot be written | Confirm the directory configured by `DB_PATH` is writable. |
-
-For a fresh **local SQLite** demonstration, stop the server, back up the database, move the `data` folder outside the project, and restart with `SEED_DEMO=true`. This creates a new database; it does not preserve the old records. It does not reset a Turso database.
-
-## Additional guides
+### Further documentation
 
 | Guide | Contents |
 | --- | --- |
-| [Presentation guide](docs/DEMO-GUIDE.md) | Classroom walkthrough and manual checks. |
-| [Admin and Google setup](docs/ADMIN-GOOGLE-SETUP.md) | First admin, Google sign-in, and Gmail recovery configuration. |
-| [Account verification](docs/ACCOUNT-VERIFICATION.md) | New account tests, screenshots, and remaining live checks. |
-| [Turso setup](docs/TURSO-SETUP.md) | Cloud database configuration and persistence test. |
-| [Storage verification](docs/TURSO-VERIFICATION.md) | Historical adapter test results and verification limits. |
-| [QA report](docs/QA-REPORT.md) | Earlier browser checks, screenshots, and fixes. |
-| [Original verification notes](docs/VERIFICATION.md) | Earlier implementation checks. |
-
-Historical reports describe the state at the time they were written. For real patient use, further work is needed on identity verification, provider enrollment, consent, backups, auditing, monitoring, and deployment-specific privacy and security review.
+| [Developer guide](docs/DEVELOPER-GUIDE.md) | Installation, commands, configuration, deployment, and technical troubleshooting. |
+| [Admin, Google, and Gmail setup](docs/ADMIN-GOOGLE-SETUP.md) | Private owner configuration for admin access, Google sign-in, and recovery emails. |
+| [Presentation guide](docs/DEMO-GUIDE.md) | Suggested classroom walkthrough. |
+| [Turso setup](docs/TURSO-SETUP.md) | Database connection and storage verification. |
+| [Account verification](docs/ACCOUNT-VERIFICATION.md) | Account tests, screenshots, and remaining live checks. |
+| [QA report](docs/QA-REPORT.md) | Earlier browser verification and findings. |
