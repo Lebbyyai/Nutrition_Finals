@@ -1,5 +1,6 @@
 import express from 'express';
 import { openDatabase, databaseDiagnostic } from './database.js';
+import { initializeAccounts, findAccount, installAccounts } from './accounts.js';
 import { randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
@@ -143,6 +144,8 @@ export async function createApp(options = {}) {
     await schema(db);
     databaseStage = 'seed';
     await seed(db, options.seed ?? (env.SEED_DEMO ? env.SEED_DEMO === 'true' : !production), env);
+    databaseStage = 'accounts';
+    await initializeAccounts(db, env, passwordHash);
   } catch (error) {
     const diagnostic = databaseDiagnostic(error);
     try { await db.close(); } catch { /* Preserve the startup diagnostic. */ }
@@ -153,7 +156,8 @@ export async function createApp(options = {}) {
   app.disable('x-powered-by');
   app.locals.db = db.raw;
   app.locals.databaseKind = db.kind;
-  app.locals.close = () => db.close();
+  app.locals.recoveryJobs = new Set();
+  app.locals.close = async () => { await Promise.allSettled([...app.locals.recoveryJobs]); await db.close(); };
   const rates = new Map();
   const limiter = (limit, windowMs) => (req, res, next) => {
     const key = `${req.path}:${req.ip}`;
@@ -191,21 +195,24 @@ export async function createApp(options = {}) {
     const raw = (req.headers.cookie || '').split(';').map(x => x.trim()).find(x => x.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1);
     req.sessionToken = raw && /^[a-f0-9]{64}$/.test(raw) ? raw : null;
     req.user = req.sessionToken ? await db.prepare('SELECT u.* FROM sessions s JOIN users u ON u.id=s.userId WHERE s.tokenHash=? AND s.expiresAt>?').get(hashToken(req.sessionToken), Date.now()) : null;
+    if (!req.user && req.sessionToken) req.user = await db.prepare("SELECT u.id,u.name,u.email,u.passwordHash,'admin' AS role FROM admin_sessions s JOIN admin_accounts u ON u.id=s.userId WHERE s.tokenHash=? AND s.expiresAt>?").get(hashToken(req.sessionToken), Date.now());
     next();
   });
   const auth = (req, res, next) => req.user ? next() : res.status(401).json({ error: 'Please sign in to continue.' });
   const role = value => (req, res, next) => req.user.role === value ? next() : res.status(403).json({ error: 'Your account cannot perform this action.' });
   const cookieOptions = { httpOnly: true, secure: production, sameSite: 'strict', path: '/' };
-  async function startSession(req, res, userId) {
-    if (req.sessionToken) await db.prepare('DELETE FROM sessions WHERE tokenHash=?').run(hashToken(req.sessionToken));
-    await db.prepare('DELETE FROM sessions WHERE expiresAt<=?').run(Date.now());
+  async function startSession(req, res, userId, accountRole = 'patient') {
+    const table = accountRole === 'admin' ? 'admin_sessions' : 'sessions';
+    if (req.sessionToken) for (const name of ['sessions','admin_sessions']) await db.prepare('DELETE FROM '+name+' WHERE tokenHash=?').run(hashToken(req.sessionToken));
+    await db.prepare('DELETE FROM '+table+' WHERE expiresAt<=?').run(Date.now());
     const token = randomBytes(32).toString('hex');
-    await db.prepare('INSERT INTO sessions VALUES (?,?,?)').run(hashToken(token), userId, Date.now() + SESSION_MS);
+    await db.prepare('INSERT INTO '+table+' VALUES (?,?,?)').run(hashToken(token), userId, Date.now() + SESSION_MS);
     res.cookie(COOKIE, token, { ...cookieOptions, maxAge: SESSION_MS });
   }
   const assignedProvider = async patientId => (await db.prepare('SELECT providerId FROM assignments WHERE patientId=?').get(patientId))?.providerId;
   const appointmentById = async id => db.prepare('SELECT a.*, u.name AS patientName, p.name AS providerName FROM appointments a JOIN users u ON u.id=a.patientId JOIN users p ON p.id=a.providerId WHERE a.id=?').get(id);
   const noteById = async id => noteRow(await db.prepare('SELECT n.*, u.name AS patientName FROM notes n JOIN users u ON u.id=n.patientId WHERE n.id=?').get(id));
+  installAccounts({ app, db, env, appOrigin, auth, role, limiter, insist, textField, passwordHash, verifyPassword, startSession, cookieOptions, options });
 
   app.get('/api/health', async (req, res) => { try { await db.prepare('SELECT 1 AS ready').get(); res.json({ status: 'ok', storage: db.kind }); } catch { res.status(503).json({ status: 'unavailable' }); } });
   app.get('/api/config', (req, res) => res.json({ jitsiDomain, timezone: 'Asia/Manila' }));
@@ -213,10 +220,10 @@ export async function createApp(options = {}) {
   app.post('/api/auth/login', limiter(15, 15 * 60000), async (req, res) => {
     const email = textField(req.body.email, 'Email', 254).toLowerCase();
     const password = textField(req.body.password, 'Password', 256);
-    const user = await db.prepare('SELECT * FROM users WHERE email=?').get(email);
+    const user = await findAccount(db, email);
     const valid = await verifyPassword(password, user?.passwordHash || dummyHash);
     insist(user && valid, 'The email or password is incorrect.', 401);
-    await startSession(req, res, user.id);
+    await startSession(req, res, user.id, user.role);
     res.json({ user: publicUser(user) });
   });
   app.post('/api/auth/register', limiter(5, 15 * 60000), async (req, res) => {
@@ -225,7 +232,7 @@ export async function createApp(options = {}) {
     insist(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email), 'Enter a valid email address.');
     const password = textField(req.body.password, 'Password', 256);
     insist(password.length >= 12, 'Use a password with at least 12 characters.');
-    insist(!(await db.prepare('SELECT id FROM users WHERE email=?').get(email)), 'An account with this email already exists.', 409);
+    insist(!(await findAccount(db, email)), 'An account with this email already exists.', 409);
     const provider = await db.prepare("SELECT id FROM users WHERE role='dietitian' ORDER BY id LIMIT 1").get();
     insist(provider, 'Registration will open once a dietitian is configured.', 503);
     const id = randomUUID();
@@ -240,11 +247,12 @@ export async function createApp(options = {}) {
     res.status(201).json({ user: { id, name, email, role: 'patient' } });
   });
   app.post('/api/auth/logout', async (req, res) => {
-    if (req.sessionToken) await db.prepare('DELETE FROM sessions WHERE tokenHash=?').run(hashToken(req.sessionToken));
+    if (req.sessionToken) for (const table of ['sessions','admin_sessions']) await db.prepare('DELETE FROM '+table+' WHERE tokenHash=?').run(hashToken(req.sessionToken));
     res.clearCookie(COOKIE, cookieOptions);
     res.json({ ok: true });
   });
   app.get('/api/dashboard', auth, async (req, res) => {
+    if (req.user.role === 'admin') return res.json({meals:[],appointments:[],notes:[],patients:[],water:{glasses:0}});
     const provider = req.user.role === 'dietitian';
     const scope = provider ? 'patientId IN (SELECT patientId FROM assignments WHERE providerId=?)' : 'patientId=?';
     const meals = await db.prepare(`SELECT * FROM meals WHERE ${scope} ORDER BY date DESC, time DESC`).all(req.user.id);

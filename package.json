@@ -17,6 +17,7 @@
     "@libsql/client": "^0.18.0",
     "@tursodatabase/serverless": "^1.4.1",
     "express": "^5.1.0",
+    "google-auth-library": "^11.3.2",
     "lucide-react": "^0.468.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"

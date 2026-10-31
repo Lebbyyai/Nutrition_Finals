@@ -25,7 +25,9 @@ A full-stack tele-nutrition platform that connects patients and dietitians throu
 
 | Feature | What users can do |
 | --- | --- |
-| Accounts | Register as a patient, sign in, and sign out using server-side sessions. |
+| Accounts | Register as a patient, sign in with a password or configured Google account, and sign out using server-side sessions. |
+| Administration | An owner-provisioned admin can create dietitian accounts and manage patient assignments. |
+| Password recovery | Patients, dietitians, and admins can request single-use recovery links when Gmail delivery is configured. |
 | Overview | Review daily meal totals, hydration, and the next consultation. |
 | Food journal | Add, search, filter by date, and remove personal meal entries. Record estimated calories, protein, fiber, mood, and notes. |
 | Hydration | Add or remove glasses in a daily water log. |
@@ -134,7 +136,22 @@ To preview the built app locally, run `npm run build`, set `APP_ORIGIN=http://lo
 4. Share a care plan when appropriate. Patients receive the plan, not the private subjective, objective, or assessment sections.
 5. Open the same appointment to join the consultation, then mark the visit complete when finished.
 
-Public registration creates patient accounts. Dietitian accounts are provisioned through the seed configuration below.
+Public registration creates patient accounts. Administrators create dietitian accounts from the admin workspace; the seed configuration below can also provision an initial classroom provider.
+
+### Administrator workflow
+
+1. Configure the first owner account through private Render environment variables.
+2. Sign in through the normal sign-in page.
+3. Select **Add a dietitian** and confirm creation with your administrator password.
+4. Use **Patient assignments** to connect registered patients to a dietitian.
+
+See [Admin, Google, and Gmail setup](docs/ADMIN-GOOGLE-SETUP.md) for the private configuration and complete instructions.
+
+### Google sign-in and password recovery
+
+**Continue with Google** becomes available when the owner configures a Google OAuth web client. New Google users receive patient access; existing authorized Gmail/Workspace accounts retain their role.
+
+Choose **Forgot password?** to request a recovery email. Links expire after 30 minutes, work once, and revoke previous sessions when used. Gmail delivery needs a separate send-only OAuth authorization from the sender mailbox owner. These external services require owner configuration before live use.
 
 ### Classroom accounts
 
@@ -173,6 +190,13 @@ The server automatically loads a local `.env` file. Host-provided environment va
 | `PROVIDER_EMAIL` | Dietitian email when provisioning without demo accounts. |
 | `PROVIDER_PASSWORD` | Initial dietitian password; at least 12 characters. |
 | `PROVIDER_NAME` | Initial dietitian display name. |
+| `ADMIN_EMAIL` | First administrator email; use an address not already registered as a clinical user. |
+| `ADMIN_PASSWORD` | Private first-admin password, at least 12 characters; remove after initial setup. |
+| `ADMIN_NAME` | First administrator display name. |
+| `GOOGLE_CLIENT_ID` | Google OAuth web client ID. |
+| `GOOGLE_CLIENT_SECRET` | Private Google OAuth client secret. |
+| `GMAIL_FROM` | Authorized sender mailbox for recovery emails. |
+| `GMAIL_REFRESH_TOKEN` | Private send-only Gmail OAuth refresh token. |
 
 For an empty database without demo users, set `SEED_DEMO=false` and supply the provider variables. Production disables demo seeding by default. Changing seed settings does **not** update or delete existing accounts, passwords, or records.
 
@@ -180,7 +204,7 @@ For an empty database without demo users, set `SEED_DEMO=false` and supply the p
 
 ### Render with Turso
 
-The project is deployed at **[nutrition-finals.onrender.com](https://nutrition-finals.onrender.com)**. Its Turso connection has been confirmed through the live health check. A saved-record redeployment test is still required to complete persistence acceptance.
+The project is deployed at **[nutrition-finals.onrender.com](https://nutrition-finals.onrender.com)**. Its Turso connection has been confirmed through the live health check. The owner also confirmed that a saved Tinola entry survived a Render redeployment.
 
 | Render setting | Value |
 | --- | --- |
@@ -208,7 +232,7 @@ npm run test:libsql
 npm run build
 ```
 
-The most recent recorded full SQLite test run passed **28 checks**. The earlier asynchronous libSQL run passed **27 checks**, before the additional startup-diagnostic test was added. These local checks do not prove a two-device video call or a deployed restart test.
+The expanded account-management suite passes **43 checks with SQLite** and **43 checks with asynchronous local libSQL**. The production build passes. Google verification and Gmail delivery are mocked in tests; live acceptance requires owner configuration. See [account verification](docs/ACCOUNT-VERIFICATION.md).
 
 ### Live acceptance checklist
 
@@ -220,7 +244,8 @@ Use this checklist before presenting the deployed system:
 - [ ] Save a shared care plan and verify private SOAP sections stay hidden from the patient.
 - [ ] Confirm two-device audio and video in the same appointment.
 - [ ] Check the latest layout and sign-in changes after deployment.
-- [ ] Save an identifiable test record, redeploy, and confirm it remains.
+- [x] Save an identifiable test record, redeploy, and confirm it remains (owner-reported Tinola test).
+- [ ] Configure and verify the first admin, dietitian creation, Google sign-in, and real recovery-email delivery.
 
 Earlier local browser results are documented in the [QA report](docs/QA-REPORT.md).
 
@@ -271,6 +296,8 @@ For a fresh **local SQLite** demonstration, stop the server, back up the databas
 | Guide | Contents |
 | --- | --- |
 | [Presentation guide](docs/DEMO-GUIDE.md) | Classroom walkthrough and manual checks. |
+| [Admin and Google setup](docs/ADMIN-GOOGLE-SETUP.md) | First admin, Google sign-in, and Gmail recovery configuration. |
+| [Account verification](docs/ACCOUNT-VERIFICATION.md) | New account tests, screenshots, and remaining live checks. |
 | [Turso setup](docs/TURSO-SETUP.md) | Cloud database configuration and persistence test. |
 | [Storage verification](docs/TURSO-VERIFICATION.md) | Historical adapter test results and verification limits. |
 | [QA report](docs/QA-REPORT.md) | Earlier browser checks, screenshots, and fixes. |

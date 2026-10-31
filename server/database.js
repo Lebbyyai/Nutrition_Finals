@@ -5,6 +5,8 @@ import { dirname, resolve } from 'node:path';
 // Only report known codes and numeric HTTP status, never SDK messages or URLs.
 export function databaseDiagnostic(error) {
   const allowed = new Set(['SERVER_ERROR', 'SQLITE_AUTH', 'SQLITE_PERM', 'SQLITE_READONLY', 'SQLITE_ERROR', 'SQLITE_CONSTRAINT', 'SQLITE_BUSY', 'SQLITE_CANTOPEN', 'HRANA_PROTO_ERROR', 'HRANA_CLOSED_ERROR', 'PROTOCOL_VERSION_ERROR', 'INTERNAL_ERROR', 'URL_INVALID', 'ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'ECONNRESET', 'UNAUTHORIZED', 'FORBIDDEN']);
+  allowed.add('ADMIN_CONFIG_INVALID');
+  allowed.add('ADMIN_EMAIL_IN_USE');
   const details = new Set();
   const seen = new Set();
   for (let item = error; item && !seen.has(item) && seen.size < 6; item = item.cause) {
@@ -70,7 +72,7 @@ export function wrapClient(client) {
       };
     },
     exec: sql => client.executeMultiple(sql),
-    batch: statements => client.batch(statements, 'write'),
+    batch: async statements => (await client.batch(statements, 'write')).map(result => ({ changes: result.rowsAffected })),
     close: () => client.close(),
   };
   adapter.raw = adapter;
