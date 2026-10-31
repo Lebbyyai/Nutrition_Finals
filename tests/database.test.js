@@ -2,8 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createClient } from '@libsql/client';
-import { openDatabase, wrapClient } from '../server/database.js';
+import { openDatabase, wrapClient, databaseDiagnostic } from '../server/database.js';
 import { createApp } from '../server/app.js';
+
+test('startup diagnostics report safe codes and HTTP status without private messages', async()=>{
+ const error=Object.assign(new Error('private-token and private-url'),{code:'SERVER_ERROR',cause:{status:401,message:'private-token'}});
+ assert.equal(databaseDiagnostic(error),'SERVER_ERROR, HTTP 401');
+ assert.equal(databaseDiagnostic({code:'private-token',message:'private-url'}),'UNKNOWN');
+ const client={executeMultiple:async()=>{throw error;},close:()=>{throw new Error('private-close-error');}};
+ await assert.rejects(createApp({databaseClient:client,env:{NODE_ENV:'test'}}),e=>{
+  assert.match(e.message,/schema: SERVER_ERROR, HTTP 401/);
+  assert.ok(!e.message.includes('private-'));return true;
+ });
+});
 
 test('cloud mode requires complete credentials and never silently opens SQLite',async()=>{
  for(const env of [{DATABASE_DRIVER:'turso'},{TURSO_DATABASE_URL:'libsql://example.turso.io'},{TURSO_AUTH_TOKEN:'fictional-test-token'},{DATABASE_DRIVER:'other'},{DATABASE_DRIVER:'sqlite',TURSO_DATABASE_URL:'libsql://example.turso.io',TURSO_AUTH_TOKEN:'fictional-test-token'}]) {

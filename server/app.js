@@ -1,5 +1,5 @@
 import express from 'express';
-import { openDatabase } from './database.js';
+import { openDatabase, databaseDiagnostic } from './database.js';
 import { randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
 import { existsSync } from 'node:fs';
@@ -138,12 +138,15 @@ export async function createApp(options = {}) {
   }
   const dbPath = options.dbPath || env.DB_PATH || resolve(ROOT, 'data', 'savor.sqlite');
   const db = await openDatabase({ env, dbPath, client: options.databaseClient });
+  let databaseStage = 'schema';
   try {
     await schema(db);
+    databaseStage = 'seed';
     await seed(db, options.seed ?? (env.SEED_DEMO ? env.SEED_DEMO === 'true' : !production), env);
-  } catch {
-    await db.close();
-    throw new Error('Database initialization failed. Check the database connection, token permissions, and storage access.');
+  } catch (error) {
+    const diagnostic = databaseDiagnostic(error);
+    try { await db.close(); } catch { /* Preserve the startup diagnostic. */ }
+    throw new Error(`Database initialization failed (${databaseStage}: ${diagnostic}). Check the database connection, token permissions, and storage access.`);
   }
   const dummyHash = await passwordHash(randomBytes(20).toString('hex'));
   const app = express();

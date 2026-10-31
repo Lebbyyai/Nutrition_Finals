@@ -2,6 +2,19 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
+// Only report known codes and numeric HTTP status, never SDK messages or URLs.
+export function databaseDiagnostic(error) {
+  const allowed = new Set(['SERVER_ERROR', 'SQLITE_AUTH', 'SQLITE_PERM', 'SQLITE_READONLY', 'SQLITE_ERROR', 'SQLITE_CONSTRAINT', 'SQLITE_BUSY', 'SQLITE_CANTOPEN', 'HRANA_PROTO_ERROR', 'HRANA_CLOSED_ERROR', 'PROTOCOL_VERSION_ERROR', 'INTERNAL_ERROR', 'URL_INVALID', 'ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'ECONNRESET', 'UNAUTHORIZED', 'FORBIDDEN']);
+  const details = new Set();
+  const seen = new Set();
+  for (let item = error; item && !seen.has(item) && seen.size < 6; item = item.cause) {
+    seen.add(item);
+    if (allowed.has(item.code)) details.add(item.code);
+    if (Number.isInteger(item.status) && item.status >= 400 && item.status <= 599) details.add(`HTTP ${item.status}`);
+  }
+  return [...details].join(', ') || 'UNKNOWN';
+}
+
 // Both drivers expose the same asynchronous operations to the application.
 // Cloud mode never keeps a local replica or silently falls back to disk.
 export async function openDatabase({ env = process.env, dbPath, client } = {}) {
